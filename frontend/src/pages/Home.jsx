@@ -1,68 +1,28 @@
-import React, { useMemo, useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useEffect, useMemo, useState } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 
-// homepage: scrollable long map + sequential unlock + real navigation to /level/1..5
-// - must go in order (can't open locked levels)
-// - when you RETURN to homepage from a level page, it unlocks the next level + highlights the segment
-// - progress persists in localStorage
+// homepage: grid "level select" (15 boxes), same dark theme
+// - only levels 1..5 are real (navigate to /level/1..5)
+// - levels unlock in order (1 -> 2 -> 3 -> 4 -> 5)
+// - finishing a level sets localStorage.finlingo_last_completed_level = "<n>"
+// - when you come back to /home, it unlocks the next level
 
 export default function Home() {
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [selected, setSelected] = useState(1);
-  const [unlockedLevel, setUnlockedLevel] = useState(1); // max unlocked
+  const [unlockedLevel, setUnlockedLevel] = useState(1);
   const [toast, setToast] = useState("Tap level 1 to start — complete them in order.");
-  const [unlockPulseSeg, setUnlockPulseSeg] = useState(null); // 1..4
 
-  const levels = useMemo(
-    () => [
-      { id: 1, x: 78, y: 10, icon: "🚀", label: "Level 1" },
-      { id: 2, x: 52, y: 30, icon: "⭐", label: "Level 2" },
-      { id: 3, x: 22, y: 52, icon: "🧠", label: "Level 3" },
-      { id: 4, x: 62, y: 74, icon: "💰", label: "Level 4" },
-      { id: 5, x: 28, y: 92, icon: "🏆", label: "Level 5" },
-    ],
-    []
-  );
-
-  // ---- persistence ----
-  useEffect(() => {
-    const savedUnlocked = Number(localStorage.getItem("finlingo_unlocked_level") || "1");
-    const safeUnlocked = Number.isFinite(savedUnlocked)
-      ? Math.min(Math.max(savedUnlocked, 1), 5)
-      : 1;
-
-    setUnlockedLevel(safeUnlocked);
-    setSelected(Math.min(safeUnlocked, 5));
-
-    // if we are coming back from a level, unlock the next one
-    // (level pages should set localStorage.finlingo_last_completed_level = "<n>" before navigating back)
-    const lastCompleted = Number(localStorage.getItem("finlingo_last_completed_level") || "0");
-    if (Number.isFinite(lastCompleted) && lastCompleted >= 1 && lastCompleted <= 5) {
-      const next = Math.min(lastCompleted + 1, 5);
-
-      // only unlock if it advances progress
-      if (next > safeUnlocked) {
-        setUnlockedLevel(next);
-        localStorage.setItem("finlingo_unlocked_level", String(next));
-
-        // pulse segment between completed and next (segment index = completed level)
-        if (lastCompleted <= 4) {
-          setUnlockPulseSeg(lastCompleted);
-          window.setTimeout(() => setUnlockPulseSeg(null), 900);
-        }
-
-        setToast(`Unlocked level ${next}!`);
-      }
-
-      // clear flag so it doesn't re-unlock on refresh
-      localStorage.removeItem("finlingo_last_completed_level");
-    }
+  // create 15 slots, but only first 5 are playable
+  const levels = useMemo(() => {
+    return Array.from({ length: 15 }, (_, i) => {
+      const id = i + 1;
+      const playable = id <= 5;
+      return { id, playable };
+    });
   }, []);
-
-  useEffect(() => {
-    localStorage.setItem("finlingo_unlocked_level", String(unlockedLevel));
-  }, [unlockedLevel]);
 
   function showToast(msg, ms = 2200) {
     setToast(msg);
@@ -74,8 +34,43 @@ export default function Home() {
     }
   }
 
+  // ---- load progress + unlock when returning from a level ----
+  useEffect(() => {
+    const savedUnlocked = Number(localStorage.getItem("finlingo_unlocked_level") || "1");
+    const safeUnlocked = Number.isFinite(savedUnlocked)
+      ? Math.min(Math.max(savedUnlocked, 1), 5)
+      : 1;
+
+    let nextUnlocked = safeUnlocked;
+
+    // if we are coming back from a level, unlock the next one
+    const lastCompletedRaw = localStorage.getItem("finlingo_last_completed_level");
+    const lastCompleted = Number(lastCompletedRaw || "0");
+
+    if (Number.isFinite(lastCompleted) && lastCompleted >= 1 && lastCompleted <= 5) {
+      const next = Math.min(lastCompleted + 1, 5);
+      if (next > safeUnlocked) {
+        nextUnlocked = next;
+        localStorage.setItem("finlingo_unlocked_level", String(nextUnlocked));
+        showToast(`Unlocked level ${nextUnlocked}!`);
+      }
+      // clear flag so refresh doesn't re-trigger
+      localStorage.removeItem("finlingo_last_completed_level");
+    }
+
+    setUnlockedLevel(nextUnlocked);
+    setSelected(Math.min(nextUnlocked, 5));
+  }, [location.pathname]);
+
   // ---- click -> go to level page ----
   function tryOpenLevel(levelId) {
+    const isPlayable = levelId <= 5;
+
+    if (!isPlayable) {
+      showToast("These levels are coming soon 😼");
+      return;
+    }
+
     if (levelId > unlockedLevel) {
       showToast(`Open level ${unlockedLevel} to unlock this level.`);
       return;
@@ -84,8 +79,6 @@ export default function Home() {
     setSelected(levelId);
     showToast(`Loading level ${levelId}...`, 900);
 
-    // navigate to the correct level page
-    // make sure your routes exist: /level/1, /level/2, etc
     window.clearTimeout(tryOpenLevel._nav);
     tryOpenLevel._nav = window.setTimeout(() => {
       navigate(`/level/${levelId}`);
@@ -94,202 +87,99 @@ export default function Home() {
 
   // ---- logout ----
   function handleLogout() {
-    // clear auth keys if you have them
     localStorage.removeItem("finlingo_session");
-    // ALWAYS go back to login
-    navigate("/");
+    navigate("/"); // your login route
   }
 
-  // segments 1..4 correspond to 1->2, 2->3, 3->4, 4->5
-  const segUnlocked = {
-    1: unlockedLevel >= 2,
-    2: unlockedLevel >= 3,
-    3: unlockedLevel >= 4,
-    4: unlockedLevel >= 5,
-  };
+  // quick "star" display like the example (based on progress)
+  function starsForLevel(id) {
+    // feel free to tweak this logic
+    if (id < unlockedLevel) return 3; // completed
+    if (id === unlockedLevel) return 2; // current
+    return 0; // locked
+  }
 
   return (
     <div style={styles.page}>
       <div style={styles.topBar}>
-        {/* left: HOMEPAGE only */}
-        <div style={styles.centerTitle} aria-label="homepage title">
-          HOMEPAGE
-        </div>
+        <div style={styles.centerTitle}>HOMEPAGE</div>
 
-        {/* right: settings + logout */}
         <div style={styles.rightBtns}>
-          <button
-            type="button"
-            style={styles.settingsBtn}
-            onClick={() => navigate("/settings")}
-            aria-label="settings"
-            title="Settings"
-          >
+          <button type="button" style={styles.settingsBtn} onClick={() => navigate("/settings")}>
             ⚙️
           </button>
-
-          <button
-            type="button"
-            style={styles.logoutBtn}
-            onClick={handleLogout}
-            aria-label="log out"
-            title="Log out"
-          >
+          <button type="button" style={styles.logoutBtn} onClick={handleLogout}>
             Log out
           </button>
         </div>
       </div>
 
-      <div style={styles.mapWrap}>
-        <div style={styles.mapCard}>
+      <div style={styles.wrap}>
+        <div style={styles.card}>
           <div style={{ ...styles.blob, ...styles.blob1 }} />
           <div style={{ ...styles.blob, ...styles.blob2 }} />
 
-          <svg viewBox="0 0 100 100" preserveAspectRatio="none" style={styles.pathSvg} aria-hidden="true">
-            <path
-              d="M78 10
-                 C 66 18, 60 24, 52 30
-                 S 34 44, 22 52
-                 S 46 66, 62 74
-                 S 44 86, 28 92"
-              fill="none"
-              stroke="rgba(255,255,255,0.18)"
-              strokeWidth="6.2"
-              strokeLinecap="round"
-            />
+          <div style={styles.header}>
+            <div style={styles.bigTitle}>Select Level</div>
+            <div style={styles.smallSub}>Complete levels in order to unlock the next one.</div>
+          </div>
 
-            <path
-              d="M78 10
-                 C 66 18, 60 24, 52 30
-                 S 34 44, 22 52
-                 S 46 66, 62 74
-                 S 44 86, 28 92"
-              fill="none"
-              stroke="rgba(99,102,241,0.22)"
-              strokeWidth="2.4"
-              strokeLinecap="round"
-            />
+          <div style={styles.grid}>
+            {levels.map((lvl) => {
+              const isPlayable = lvl.playable;
+              const isLocked = lvl.id > unlockedLevel && isPlayable;
+              const isSelected = selected === lvl.id;
 
-            {/* seg 1 */}
-            <path
-              d="M78 10 C 66 18, 60 24, 52 30"
-              fill="none"
-              stroke={segUnlocked[1] ? "rgba(99,102,241,0.82)" : "transparent"}
-              strokeWidth={unlockPulseSeg === 1 ? 4.8 : 3.0}
-              strokeLinecap="round"
-              style={{
-                filter: segUnlocked[1] ? "drop-shadow(0 10px 18px rgba(99,102,241,0.45))" : "none",
-                transition: "stroke-width 220ms ease",
-              }}
-            />
-            <path
-              d="M78 10 C 66 18, 60 24, 52 30"
-              fill="none"
-              stroke={segUnlocked[1] ? "rgba(34,197,94,0.70)" : "transparent"}
-              strokeWidth={unlockPulseSeg === 1 ? 2.4 : 1.3}
-              strokeDasharray="2.4 3.6"
-              strokeLinecap="round"
-              style={{ transition: "stroke-width 220ms ease" }}
-            />
+              const starCount = isPlayable ? starsForLevel(lvl.id) : 0;
 
-            {/* seg 2 */}
-            <path
-              d="M52 30 S 34 44, 22 52"
-              fill="none"
-              stroke={segUnlocked[2] ? "rgba(99,102,241,0.82)" : "transparent"}
-              strokeWidth={unlockPulseSeg === 2 ? 4.8 : 3.0}
-              strokeLinecap="round"
-              style={{
-                filter: segUnlocked[2] ? "drop-shadow(0 10px 18px rgba(99,102,241,0.45))" : "none",
-                transition: "stroke-width 220ms ease",
-              }}
-            />
-            <path
-              d="M52 30 S 34 44, 22 52"
-              fill="none"
-              stroke={segUnlocked[2] ? "rgba(34,197,94,0.70)" : "transparent"}
-              strokeWidth={unlockPulseSeg === 2 ? 2.4 : 1.3}
-              strokeDasharray="2.4 3.6"
-              strokeLinecap="round"
-              style={{ transition: "stroke-width 220ms ease" }}
-            />
+              return (
+                <button
+                  key={lvl.id}
+                  type="button"
+                  onClick={() => tryOpenLevel(lvl.id)}
+                  style={{
+                    ...styles.tile,
+                    ...(isSelected ? styles.tileSelected : {}),
+                    ...(isPlayable ? {} : styles.tileSoon),
+                    ...(isLocked ? styles.tileLocked : {}),
+                  }}
+                  title={
+                    !isPlayable
+                      ? "Coming soon"
+                      : isLocked
+                      ? `Locked — open level ${unlockedLevel} first`
+                      : `Open level ${lvl.id}`
+                  }
+                >
+                  {/* top stars row */}
+                  <div style={styles.starRow}>
+                    {Array.from({ length: 3 }).map((_, i) => (
+                      <span
+                        key={i}
+                        style={{
+                          ...styles.star,
+                          opacity: i < starCount ? 1 : 0.18,
+                        }}
+                      >
+                        ★
+                      </span>
+                    ))}
+                  </div>
 
-            {/* seg 3 */}
-            <path
-              d="M22 52 S 46 66, 62 74"
-              fill="none"
-              stroke={segUnlocked[3] ? "rgba(99,102,241,0.82)" : "transparent"}
-              strokeWidth={unlockPulseSeg === 3 ? 4.8 : 3.0}
-              strokeLinecap="round"
-              style={{
-                filter: segUnlocked[3] ? "drop-shadow(0 10px 18px rgba(99,102,241,0.45))" : "none",
-                transition: "stroke-width 220ms ease",
-              }}
-            />
-            <path
-              d="M22 52 S 46 66, 62 74"
-              fill="none"
-              stroke={segUnlocked[3] ? "rgba(34,197,94,0.70)" : "transparent"}
-              strokeWidth={unlockPulseSeg === 3 ? 2.4 : 1.3}
-              strokeDasharray="2.4 3.6"
-              strokeLinecap="round"
-              style={{ transition: "stroke-width 220ms ease" }}
-            />
+                  {/* center content */}
+                  <div style={styles.tileCenter}>
+                    <div style={styles.tileNumber}>{lvl.id}</div>
 
-            {/* seg 4 */}
-            <path
-              d="M62 74 S 44 86, 28 92"
-              fill="none"
-              stroke={segUnlocked[4] ? "rgba(99,102,241,0.82)" : "transparent"}
-              strokeWidth={unlockPulseSeg === 4 ? 4.8 : 3.0}
-              strokeLinecap="round"
-              style={{
-                filter: segUnlocked[4] ? "drop-shadow(0 10px 18px rgba(99,102,241,0.45))" : "none",
-                transition: "stroke-width 220ms ease",
-              }}
-            />
-            <path
-              d="M62 74 S 44 86, 28 92"
-              fill="none"
-              stroke={segUnlocked[4] ? "rgba(34,197,94,0.70)" : "transparent"}
-              strokeWidth={unlockPulseSeg === 4 ? 2.4 : 1.3}
-              strokeDasharray="2.4 3.6"
-              strokeLinecap="round"
-              style={{ transition: "stroke-width 220ms ease" }}
-            />
-          </svg>
+                    {/* lock overlay for locked playable levels */}
+                    {isLocked ? <div style={styles.lockIcon}>🔒</div> : null}
 
-          {levels.map((lvl) => {
-            const isSelected = selected === lvl.id;
-            const isLocked = lvl.id > unlockedLevel;
-
-            return (
-              <button
-                key={lvl.id}
-                type="button"
-                onClick={() => tryOpenLevel(lvl.id)}
-                style={{
-                  ...styles.levelBtn,
-                  left: `${lvl.x}%`,
-                  top: `${lvl.y}%`,
-                  transform: "translate(-50%, -50%)",
-                  ...(isSelected ? styles.levelBtnActive : {}),
-                  ...(isLocked ? styles.levelBtnLocked : {}),
-                }}
-                aria-label={lvl.label}
-                title={isLocked ? `Locked — open level ${unlockedLevel} first` : lvl.label}
-              >
-                <div style={{ ...styles.levelIcon, ...(isLocked ? styles.iconLocked : {}) }}>{lvl.icon}</div>
-                <div style={{ ...styles.levelText, ...(isLocked ? styles.textLocked : {}) }}>{lvl.id}</div>
-                <div style={{ ...styles.stars, ...(isLocked ? styles.starsLocked : {}) }}>
-                  <span style={styles.star}>★</span>
-                  <span style={styles.star}>★</span>
-                  <span style={styles.star}>★</span>
-                </div>
-                {isLocked ? <div style={styles.lockBadge}>🔒</div> : null}
-              </button>
-            );
-          })}
+                    {/* coming soon label for 6..15 */}
+                    {!isPlayable ? <div style={styles.soonTag}>SOON</div> : null}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
 
           <div style={styles.bottomHint}>
             <span style={styles.hintPill}>Tip</span>
@@ -357,24 +247,26 @@ const styles = {
     fontWeight: 900,
   },
 
-  mapWrap: {
+  wrap: {
     flex: 1,
     padding: 20,
     maxWidth: 980,
     width: "100%",
     margin: "0 auto",
+    display: "grid",
+    placeItems: "center",
   },
 
-  mapCard: {
+  card: {
     position: "relative",
     width: "100%",
-    height: 1250,
     borderRadius: 24,
     overflow: "hidden",
     border: "1px solid rgba(255,255,255,0.12)",
     background: "linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.03))",
     backdropFilter: "blur(10px)",
     boxShadow: "0 20px 60px rgba(0,0,0,0.35)",
+    padding: 18,
   },
 
   blob: {
@@ -382,6 +274,7 @@ const styles = {
     borderRadius: 999,
     filter: "blur(16px)",
     opacity: 0.75,
+    pointerEvents: "none",
   },
   blob1: {
     width: 300,
@@ -398,85 +291,119 @@ const styles = {
     background: "rgba(34,197,94,0.22)",
   },
 
-  pathSvg: {
-    position: "absolute",
-    inset: 0,
-    width: "100%",
-    height: "100%",
+  header: {
+    position: "relative",
+    padding: "8px 6px 14px",
+    textAlign: "center",
+  },
+  bigTitle: {
+    fontSize: 40,
+    fontWeight: 1000,
+    letterSpacing: 0.4,
+    lineHeight: 1.05,
+    textShadow: "0 18px 40px rgba(0,0,0,0.35)",
+  },
+  smallSub: {
+    marginTop: 8,
+    fontSize: 13,
+    opacity: 0.78,
   },
 
-  levelBtn: {
-    position: "absolute",
-    width: 92,
-    height: 92,
-    borderRadius: 26,
-    border: "1px solid rgba(255,255,255,0.16)",
-    background: "linear-gradient(135deg, rgba(255,255,255,0.10), rgba(255,255,255,0.04))",
-    color: "#e8eefc",
-    cursor: "pointer",
+  grid: {
+    position: "relative",
     display: "grid",
-    placeItems: "center",
+    gridTemplateColumns: "repeat(5, minmax(0, 1fr))",
+    gap: 14,
+    padding: "10px 6px 18px",
+  },
+
+  tile: {
+    position: "relative",
+    height: 110,
+    borderRadius: 20,
+    border: "1px solid rgba(255,255,255,0.14)",
+    background: "linear-gradient(135deg, rgba(255,255,255,0.10), rgba(255,255,255,0.04))",
     boxShadow: "0 18px 36px rgba(0,0,0,0.30)",
+    cursor: "pointer",
+    color: "#e8eefc",
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: 12,
     transition: "transform 140ms ease, box-shadow 140ms ease, border 140ms ease, opacity 140ms ease",
   },
 
-  levelBtnActive: {
-    transform: "translate(-50%, -50%) scale(1.06)",
+  tileSelected: {
+    transform: "translateY(-2px) scale(1.02)",
     border: "1px solid rgba(99,102,241,0.55)",
     boxShadow: "0 22px 50px rgba(0,0,0,0.40)",
   },
 
-  levelBtnLocked: {
-    opacity: 0.52,
+  tileLocked: {
+    opacity: 0.55,
     cursor: "not-allowed",
-    border: "1px solid rgba(255,255,255,0.12)",
-    boxShadow: "0 12px 28px rgba(0,0,0,0.22)",
   },
 
-  lockBadge: {
+  tileSoon: {
+    opacity: 0.65,
+  },
+
+  starRow: {
+    width: "100%",
+    display: "flex",
+    justifyContent: "center",
+    gap: 6,
+    marginTop: 2,
+  },
+  star: {
+    fontSize: 18,
+    color: "rgba(255, 215, 90, 0.98)",
+    textShadow: "0 10px 22px rgba(0,0,0,0.35)",
+  },
+
+  tileCenter: {
+    position: "relative",
+    flex: 1,
+    width: "100%",
+    display: "grid",
+    placeItems: "center",
+    paddingBottom: 6,
+  },
+
+  tileNumber: {
+    fontSize: 38,
+    fontWeight: 1000,
+    letterSpacing: 0.4,
+  },
+
+  lockIcon: {
     position: "absolute",
     right: 10,
-    top: 10,
-    fontSize: 14,
+    bottom: 8,
+    fontSize: 18,
     opacity: 0.95,
     filter: "drop-shadow(0 10px 20px rgba(0,0,0,0.35))",
   },
 
-  levelIcon: {
+  soonTag: {
     position: "absolute",
-    top: 14,
-    fontSize: 22,
-    filter: "drop-shadow(0 10px 20px rgba(0,0,0,0.35))",
-  },
-  iconLocked: { filter: "grayscale(1) drop-shadow(0 10px 20px rgba(0,0,0,0.35))" },
-
-  levelText: {
-    fontSize: 26,
+    bottom: 8,
+    left: "50%",
+    transform: "translateX(-50%)",
+    fontSize: 11,
     fontWeight: 1000,
-    letterSpacing: 0.2,
-    paddingTop: 10,
-  },
-  textLocked: { opacity: 0.85 },
-
-  stars: {
-    position: "absolute",
-    bottom: 10,
-    display: "flex",
-    gap: 4,
-    opacity: 0.9,
-  },
-  starsLocked: { opacity: 0.45 },
-  star: {
-    fontSize: 12,
-    color: "rgba(255, 215, 90, 0.95)",
-    textShadow: "0 10px 22px rgba(0,0,0,0.35)",
+    letterSpacing: 1.2,
+    opacity: 0.85,
+    borderRadius: 999,
+    padding: "6px 10px",
+    border: "1px solid rgba(255,255,255,0.14)",
+    background: "rgba(0,0,0,0.20)",
   },
 
   bottomHint: {
-    position: "absolute",
-    left: 16,
-    right: 16,
-    bottom: 14,
+    position: "relative",
+    marginTop: 6,
     padding: "10px 12px",
     borderRadius: 16,
     border: "1px solid rgba(255,255,255,0.12)",
