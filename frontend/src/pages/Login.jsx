@@ -1,15 +1,22 @@
 import React, { useMemo, useState } from "react";
+import { login, signupChild, signupParent } from "../api/auth";
+import { useNavigate } from "react-router-dom";
 
 /*
-  ui-only auth page
   - parent/child toggle
   - login/signup tabs
   - conditional fields
+  - now connected to backend (flask)
 */
 
 export default function AuthPage() {
+  const navigate = useNavigate();
+
   const [mode, setMode] = useState("child"); // "child" | "parent"
   const [view, setView] = useState("login"); // "login" | "signup"
+
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   const [form, setForm] = useState({
     // shared
@@ -36,35 +43,109 @@ export default function AuthPage() {
   }, [mode, view]);
 
   const canSubmit = useMemo(() => {
-    // simple ui validation (no backend)
     for (const key of fields) {
       if (!String(form[key] ?? "").trim()) return false;
     }
-    // basic password minimum (optional)
     if (fields.includes("password") && String(form.password).length < 6) return false;
     return true;
   }, [fields, form]);
 
   function updateField(key, value) {
     setForm((prev) => ({ ...prev, [key]: value }));
+    setError("");
   }
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
-    if (!canSubmit) return;
+    if (!canSubmit || loading) return;
 
-    // ui-only: show what would be sent
-    const payload = {};
-    fields.forEach((k) => (payload[k] = form[k]));
+    setLoading(true);
+    setError("");
 
-    alert(
-      `${mode.toUpperCase()} • ${view.toUpperCase()}\n\n` +
-        `ui-only payload:\n${JSON.stringify(payload, null, 2)}`
-    );
+    try {
+      // login
+      if (view === "login") {
+        const res = await login(form.username.trim(), form.password);
+
+        if (!res?.ok) {
+          setError(res?.error || "Login failed");
+          return;
+        }
+
+        // store auth
+        if (res.token) localStorage.setItem("token", res.token);
+        if (res.user) localStorage.setItem("user", JSON.stringify(res.user));
+
+        // route by role
+        navigate("/home");
+
+
+        return;
+      }
+
+      // signup
+      if (mode === "child") {
+        const res = await signupChild({
+          name: form.name.trim(),
+          username: form.username.trim(),
+          password: form.password,
+        });
+
+        if (!res?.ok) {
+          setError(res?.error || "Child signup failed");
+          return;
+        }
+
+        // show child id so parent can use it
+        const childId = res?.user?.childId;
+        alert(
+          `Child account created ✅\n\nChild ID: ${childId}\n\nSave this ID and use it when creating the parent account.`
+        );
+
+        // switch to login, keep username/password for convenience
+        setView("login");
+        setForm((prev) => ({
+          name: "",
+          username: prev.username,
+          password: prev.password,
+          childId: "",
+        }));
+
+        return;
+      }
+
+      // parent signup
+      const res = await signupParent({
+        name: form.name.trim(),
+        username: form.username.trim(),
+        password: form.password,
+        childId: form.childId.trim(),
+      });
+
+      if (!res?.ok) {
+        setError(res?.error || "Parent signup failed");
+        return;
+      }
+
+      alert("Parent account created ✅ Now log in.");
+
+      setView("login");
+      setForm((prev) => ({
+        name: "",
+        username: prev.username,
+        password: prev.password,
+        childId: "",
+      }));
+    } catch (err) {
+      setError("Network error. Is the backend running on http://127.0.0.1:5050?");
+    } finally {
+      setLoading(false);
+    }
   }
 
   function switchView(nextView) {
     setView(nextView);
+    setError("");
 
     // optional: keep username/password when switching views
     setForm((prev) => ({
@@ -109,6 +190,8 @@ export default function AuthPage() {
           </span>
         </div>
 
+        {error ? <div style={styles.errorBox}>{error}</div> : null}
+
         <form onSubmit={handleSubmit} style={styles.form}>
           {fields.includes("name") && (
             <Field
@@ -146,7 +229,7 @@ export default function AuthPage() {
               placeholder="e.g., CH-48219"
               value={form.childId}
               onChange={(v) => updateField("childId", v)}
-              helper="This will link the parent account to the child account."
+              helper="Paste the Child ID created when the child account was made."
             />
           )}
 
@@ -154,26 +237,26 @@ export default function AuthPage() {
             type="submit"
             style={{
               ...styles.primaryBtn,
-              opacity: canSubmit ? 1 : 0.55,
-              cursor: canSubmit ? "pointer" : "not-allowed",
+              opacity: canSubmit && !loading ? 1 : 0.55,
+              cursor: canSubmit && !loading ? "pointer" : "not-allowed",
             }}
-            disabled={!canSubmit}
+            disabled={!canSubmit || loading}
           >
-            {view === "login" ? "Log in" : "Create account"}
+            {loading ? "Please wait..." : view === "login" ? "Log in" : "Create account"}
           </button>
 
           <div style={styles.footerRow}>
             <button
               type="button"
               onClick={() => {
-                // ui-only: reset fields
+                setError("");
                 setForm({ name: "", username: "", password: "", childId: "" });
               }}
               style={styles.ghostBtn}
+              disabled={loading}
             >
               Clear
             </button>
-
           </div>
         </form>
       </div>
@@ -219,15 +302,7 @@ function TabButton({ active, onClick, children }) {
   );
 }
 
-function Field({
-  label,
-  placeholder,
-  value,
-  onChange,
-  type = "text",
-  helper,
-  autoComplete,
-}) {
+function Field({ label, placeholder, value, onChange, type = "text", helper, autoComplete }) {
   return (
     <div style={styles.field}>
       <label style={styles.label}>{label}</label>
@@ -277,11 +352,9 @@ const styles = {
     width: 40,
     height: 40,
     borderRadius: 12,
-    background:
-      "linear-gradient(135deg, rgba(99,102,241,1), rgba(34,197,94,1))",
+    background: "linear-gradient(135deg, rgba(99,102,241,1), rgba(34,197,94,1))",
   },
   title: { fontSize: 18, fontWeight: 800, letterSpacing: 0.2 },
-  subtitle: { fontSize: 12, opacity: 0.75, marginTop: 2 },
 
   toggleWrap: { display: "flex", alignItems: "center", gap: 10 },
   toggleLabel: { fontSize: 12, fontWeight: 700, letterSpacing: 0.2 },
@@ -340,6 +413,17 @@ const styles = {
   },
   modeHint: { fontSize: 12, opacity: 0.8 },
 
+  errorBox: {
+    marginTop: 10,
+    padding: "10px 12px",
+    borderRadius: 14,
+    background: "rgba(239,68,68,0.12)",
+    border: "1px solid rgba(239,68,68,0.35)",
+    color: "#ffd3d3",
+    fontSize: 12,
+    fontWeight: 700,
+  },
+
   form: { marginTop: 12 },
   field: { marginBottom: 12 },
   label: { display: "block", fontSize: 12, fontWeight: 700, marginBottom: 6 },
@@ -361,8 +445,7 @@ const styles = {
     border: "none",
     color: "#081027",
     fontWeight: 900,
-    background:
-      "linear-gradient(135deg, rgba(99,102,241,1), rgba(34,197,94,1))",
+    background: "linear-gradient(135deg, rgba(99,102,241,1), rgba(34,197,94,1))",
     marginTop: 8,
   },
   footerRow: {
@@ -382,5 +465,4 @@ const styles = {
     cursor: "pointer",
     minWidth: 90,
   },
-  smallText: { fontSize: 12, opacity: 0.75, textAlign: "right" },
 };
