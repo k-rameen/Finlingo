@@ -99,7 +99,7 @@ export default function AuthPage() {
         // show child id so parent can use it
         const childId = res?.user?.childId;
         alert(
-          `Child account created ✅\n\nChild ID: ${childId}\n\nSave this ID and use it when creating the parent account.`
+          `Child account created \n\nChild ID: ${childId}\n\nSave this ID and use it when creating the parent account.`
         );
 
         // switch to login, keep username/password for convenience
@@ -127,7 +127,7 @@ export default function AuthPage() {
         return;
       }
 
-      alert("Parent account created ✅ Now log in.");
+      alert("Parent account created! Now log in.");
 
       setView("login");
       setForm((prev) => ({
