@@ -1,38 +1,59 @@
 import os
-from pymongo import MongoClient, ASCENDING
-from dotenv import load_dotenv
+import sqlite3
 
-load_dotenv()
+def get_db_path():
+    return os.getenv("DB_PATH", "finlingo.db")
 
-_client = None
-_db = None
+def get_conn():
+    conn = sqlite3.connect(get_db_path())
+    conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA foreign_keys = ON;")
+    return conn
 
-def get_db():
-    global _client, _db
+def init_db():
+    conn = get_conn()
+    cur = conn.cursor()
 
-    if _db is not None:
-        return _db
+    # users: both parent and child live here
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        role TEXT NOT NULL CHECK(role IN ('child', 'parent')),
+        name TEXT,
+        username TEXT NOT NULL UNIQUE,
+        password_hash TEXT NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+    """)
 
-    mongo_uri = os.getenv("MONGODB_URI")
-    db_name = os.getenv("MONGODB_DB", "finlingo")
+    # child profile: stores the unique childId
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS child_profiles (
+        user_id INTEGER PRIMARY KEY,
+        child_id TEXT NOT NULL UNIQUE,
+        FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+    );
+    """)
 
-    if not mongo_uri:
-        raise RuntimeError("MONGODB_URI is missing in backend/.env")
+    # parent profile: optional table (room for extra parent fields later)
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS parent_profiles (
+        user_id INTEGER PRIMARY KEY,
+        FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+    );
+    """)
 
-    _client = MongoClient(mongo_uri)
-    _db = _client[db_name]
+    # link table: allows 1 parent -> many kids, or many parents -> 1 kid later
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS parent_child_links (
+        parent_user_id INTEGER NOT NULL,
+        child_user_id INTEGER NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY(parent_user_id, child_user_id),
+        FOREIGN KEY(parent_user_id) REFERENCES users(id) ON DELETE CASCADE,
+        FOREIGN KEY(child_user_id) REFERENCES users(id) ON DELETE CASCADE
+    );
+    """)
 
-    # ensure unique constraints (db-level guarantees)
-    _db.children.create_index([("username", ASCENDING)], unique=True)
-    _db.children.create_index([("childId", ASCENDING)], unique=True)
-
-    _db.parents.create_index([("username", ASCENDING)], unique=True)
-    _db.parents.create_index([("childId", ASCENDING)], unique=False)
-
-    return _db
-
-def children_col():
-    return get_db().children
-
-def parents_col():
-    return get_db().parents
+    conn.commit()
+    conn.close()
