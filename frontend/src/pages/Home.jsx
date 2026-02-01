@@ -128,6 +128,9 @@ export default function Home() {
         <div style={styles.centerTitle}>🏠 HOMEPAGE</div>
 
         <div style={styles.rightBtns}>
+          <button type="button" style={styles.goalJarBtn} onClick={() => navigate("/goal-jar")}>
+            🎯 Goal Jar
+          </button>
           <button type="button" style={styles.badgesBtn} onClick={() => navigate("/badges")}>
             🏆 Badges
           </button>
@@ -261,6 +264,21 @@ const styles = {
     gap: 8,
     transition: "all 0.2s",
   },
+
+  goalJarBtn: {
+  borderRadius: 16,
+  border: "2px solid #FFB7D5",
+  background: "rgba(255, 255, 255, 0.9)",
+  color: "#2C3E50",
+  padding: "10px 16px",
+  cursor: "pointer",
+  fontWeight: 900,
+  fontSize: "14px",
+  display: "flex",
+  alignItems: "center",
+  gap: 8,
+  transition: "all 0.2s",
+},
 
   rightBtns: {
     display: "flex",
