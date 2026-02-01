@@ -2,6 +2,9 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Login from "./pages/Login";
 import Home from "./pages/Home";
 import Settings from "./pages/Settings";
+import BadgesPage from './pages/BadgesPage';
+import GoalJar from './pages/GoalJar';
+
 
 import Level1 from "./pages/Level1";
 import Level2 from "./pages/Level2";
@@ -26,6 +29,12 @@ function App() {
         <Route path="/level/3" element={<Level3 />} />
         <Route path="/level/4" element={<Level4 />} />
         <Route path="/level/5" element={<Level5 />} />
+
+        {/* badges */}
+        <Route path="/badges" element={<BadgesPage />} />
+
+        {/* goal jar */}
+        <Route path="/goal-jar" element={<GoalJar />} />
       </Routes>
     </BrowserRouter>
   );
