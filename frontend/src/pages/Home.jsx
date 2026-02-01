@@ -26,7 +26,7 @@ export default function Home() {
 
   const [selected, setSelected] = useState(1);
   const [unlockedLevel, setUnlockedLevel] = useState(1);
-  const [toast, setToast] = useState("Tap level 1 to start — complete them in order.");
+  const [toast, setToast] = useState("🎯 Tap level 1 to start — complete them in order.");
 
   const userPrefs = readUserPrefs();
   const isEnchantedTheme = userPrefs.theme === "enchanted";
@@ -45,7 +45,7 @@ export default function Home() {
     if (ms > 0) {
       window.clearTimeout(showToast._t);
       showToast._t = window.setTimeout(() => {
-        setToast("Tap the next unlocked level to continue.");
+        setToast("🎯 Tap the next unlocked level to continue.");
       }, ms);
     }
   }
@@ -68,7 +68,7 @@ export default function Home() {
       if (next > safeUnlocked) {
         nextUnlocked = next;
         localStorage.setItem("finlingo_unlocked_level", String(nextUnlocked));
-        showToast(`Unlocked level ${nextUnlocked}!`);
+        showToast(`🎉 Unlocked level ${nextUnlocked}!`);
       }
       // clear flag so refresh doesn't re-trigger
       localStorage.removeItem("finlingo_last_completed_level");
@@ -83,17 +83,17 @@ export default function Home() {
     const isPlayable = levelId <= 5;
 
     if (!isPlayable) {
-      showToast("These levels are coming soon 😼");
+      showToast("🚧 These levels are coming soon!");
       return;
     }
 
     if (levelId > unlockedLevel) {
-      showToast(`Open level ${unlockedLevel} to unlock this level.`);
+      showToast(`🔒 Open level ${unlockedLevel} to unlock this level.`);
       return;
     }
 
     setSelected(levelId);
-    showToast(`Loading level ${levelId}...`, 900);
+    showToast(`🚀 Loading level ${levelId}...`, 900);
 
     window.clearTimeout(tryOpenLevel._nav);
     tryOpenLevel._nav = window.setTimeout(() => {
@@ -120,19 +120,22 @@ export default function Home() {
         ...styles.page,
         // Apply theme based on settings
         background: isEnchantedTheme 
-            ? "radial-gradient(1200px 700px at 15% 0%, rgba(168,124,255,0.26), transparent 55%), radial-gradient(1000px 700px at 95% 20%, rgba(64,224,208,0.18), transparent 55%), radial-gradient(900px 600px at 50% 100%, rgba(255,190,110,0.16), transparent 60%), #07081a"
-            : styles.page.background,
-        color: isEnchantedTheme ? "#f4f1ff" : styles.page.color,
+            ? "linear-gradient(135deg, #FF9FF3 0%, #A8D8EA 50%, #C9E4CA 100%)"
+            : "linear-gradient(135deg, #FFD1DC 0%, #A8D8EA 50%, #C9E4CA 100%)",
+        color: "#2C3E50",
     }}>
       <div style={styles.topBar}>
-        <div style={styles.centerTitle}>HOMEPAGE</div>
+        <div style={styles.centerTitle}>🏠 HOMEPAGE</div>
 
         <div style={styles.rightBtns}>
+          <button type="button" style={styles.badgesBtn} onClick={() => navigate("/badges")}>
+            🏆 Badges
+          </button>
           <button type="button" style={styles.settingsBtn} onClick={() => navigate("/settings")}>
-            ⚙️
+            ⚙️ Settings
           </button>
           <button type="button" style={styles.logoutBtn} onClick={handleLogout}>
-            Log out
+            🚪 Log out
           </button>
         </div>
       </div>
@@ -143,7 +146,7 @@ export default function Home() {
           <div style={{ ...styles.blob, ...styles.blob2 }} />
 
           <div style={styles.header}>
-            <div style={styles.bigTitle}>Select Level</div>
+            <div style={styles.bigTitle}>🎮 Select Level</div>
             <div style={styles.smallSub}>Complete levels in order to unlock the next one.</div>
           </div>
 
@@ -184,7 +187,7 @@ export default function Home() {
                           opacity: i < starCount ? 1 : 0.18,
                         }}
                       >
-                        ★
+                        ⭐
                       </span>
                     ))}
                   </div>
@@ -197,7 +200,7 @@ export default function Home() {
                     {isLocked ? <div style={styles.lockIcon}>🔒</div> : null}
 
                     {/* coming soon label for 6..15 */}
-                    {!isPlayable ? <div style={styles.soonTag}>SOON</div> : null}
+                    {!isPlayable ? <div style={styles.soonTag}>🚧 SOON</div> : null}
                   </div>
                 </button>
               );
@@ -205,7 +208,7 @@ export default function Home() {
           </div>
 
           <div style={styles.bottomHint}>
-            <span style={styles.hintPill}>Tip</span>
+            <span style={styles.hintPill}>💡 Tip</span>
             {toast}
           </div>
         </div>
@@ -217,11 +220,8 @@ export default function Home() {
 const styles = {
   page: {
     minHeight: "100vh",
-    background:
-      "radial-gradient(1200px 600px at 20% 0%, rgba(99,102,241,0.18), transparent 60%), radial-gradient(900px 500px at 90% 20%, rgba(34,197,94,0.14), transparent 55%), #0b1020",
-    color: "#e8eefc",
-    fontFamily:
-      'ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji"',
+    color: "#2C3E50",
+    fontFamily: '"Comic Sans MS", "Chalkboard SE", "Arial Rounded MT Bold", "Segoe UI", sans-serif',
     display: "flex",
     flexDirection: "column",
   },
@@ -242,6 +242,24 @@ const styles = {
     letterSpacing: 2.2,
     opacity: 0.95,
     textTransform: "uppercase",
+    display: "flex",
+    alignItems: "center",
+    gap: 8,
+  },
+
+  badgesBtn: {
+    borderRadius: 16,
+    border: "2px solid #FFD1DC",
+    background: "rgba(255, 255, 255, 0.9)",
+    color: "#2C3E50",
+    padding: "10px 16px",
+    cursor: "pointer",
+    fontWeight: 900,
+    fontSize: "14px",
+    display: "flex",
+    alignItems: "center",
+    gap: 8,
+    transition: "all 0.2s",
   },
 
   rightBtns: {
@@ -251,23 +269,31 @@ const styles = {
   },
 
   settingsBtn: {
-    borderRadius: 14,
-    border: "1px solid rgba(255,255,255,0.14)",
-    background: "rgba(255,255,255,0.06)",
-    color: "#e8eefc",
-    padding: "10px 12px",
+    borderRadius: 16,
+    border: "2px solid #A8D8EA",
+    background: "rgba(255, 255, 255, 0.9)",
+    color: "#2C3E50",
+    padding: "10px 16px",
     cursor: "pointer",
     fontWeight: 900,
+    display: "flex",
+    alignItems: "center",
+    gap: 8,
+    transition: "all 0.2s",
   },
 
   logoutBtn: {
-    borderRadius: 14,
-    border: "1px solid rgba(255,255,255,0.14)",
-    background: "rgba(255,255,255,0.06)",
-    color: "#e8eefc",
-    padding: "10px 14px",
+    borderRadius: 16,
+    border: "2px solid #C9E4CA",
+    background: "rgba(255, 255, 255, 0.9)",
+    color: "#2C3E50",
+    padding: "10px 16px",
     cursor: "pointer",
     fontWeight: 900,
+    display: "flex",
+    alignItems: "center",
+    gap: 8,
+    transition: "all 0.2s",
   },
 
   wrap: {
@@ -283,20 +309,20 @@ const styles = {
   card: {
     position: "relative",
     width: "100%",
-    borderRadius: 24,
+    borderRadius: 28,
     overflow: "hidden",
-    border: "1px solid rgba(255,255,255,0.12)",
-    background: "linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.03))",
+    border: "3px solid #A8D8EA",
+    background: "rgba(255, 255, 255, 0.95)",
     backdropFilter: "blur(10px)",
-    boxShadow: "0 20px 60px rgba(0,0,0,0.35)",
-    padding: 18,
+    boxShadow: "0 20px 60px rgba(168, 216, 234, 0.3)",
+    padding: 24,
   },
 
   blob: {
     position: "absolute",
     borderRadius: 999,
     filter: "blur(16px)",
-    opacity: 0.75,
+    opacity: 0.3,
     pointerEvents: "none",
   },
   blob1: {
@@ -304,14 +330,14 @@ const styles = {
     height: 300,
     left: -80,
     top: -80,
-    background: "rgba(99,102,241,0.28)",
+    background: "#FFD1DC",
   },
   blob2: {
     width: 360,
     height: 360,
     right: -110,
     bottom: -110,
-    background: "rgba(34,197,94,0.22)",
+    background: "#C9E4CA",
   },
 
   header: {
@@ -324,31 +350,38 @@ const styles = {
     fontWeight: 1000,
     letterSpacing: 0.4,
     lineHeight: 1.05,
-    textShadow: "0 18px 40px rgba(0,0,0,0.35)",
+    background: "linear-gradient(135deg, #FFD1DC, #A8D8EA)",
+    WebkitBackgroundClip: "text",
+    WebkitTextFillColor: "transparent",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 12,
   },
   smallSub: {
     marginTop: 8,
-    fontSize: 13,
-    opacity: 0.78,
+    fontSize: 14,
+    color: "#5D6D7E",
+    fontWeight: 600,
   },
 
   grid: {
     position: "relative",
     display: "grid",
     gridTemplateColumns: "repeat(5, minmax(0, 1fr))",
-    gap: 14,
+    gap: 16,
     padding: "10px 6px 18px",
   },
 
   tile: {
     position: "relative",
-    height: 110,
+    height: 120,
     borderRadius: 20,
-    border: "1px solid rgba(255,255,255,0.14)",
-    background: "linear-gradient(135deg, rgba(255,255,255,0.10), rgba(255,255,255,0.04))",
-    boxShadow: "0 18px 36px rgba(0,0,0,0.30)",
+    border: "3px solid #A8D8EA",
+    background: "rgba(255, 255, 255, 0.9)",
+    boxShadow: "0 10px 30px rgba(168, 216, 234, 0.2)",
     cursor: "pointer",
-    color: "#e8eefc",
+    color: "#2C3E50",
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
@@ -358,18 +391,22 @@ const styles = {
   },
 
   tileSelected: {
-    transform: "translateY(-2px) scale(1.02)",
-    border: "1px solid rgba(99,102,241,0.55)",
-    boxShadow: "0 22px 50px rgba(0,0,0,0.40)",
+    transform: "translateY(-4px) scale(1.03)",
+    border: "3px solid #FFD1DC",
+    boxShadow: "0 15px 40px rgba(255, 209, 220, 0.3)",
+    background: "linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(255, 209, 220, 0.2))",
   },
 
   tileLocked: {
-    opacity: 0.55,
+    opacity: 0.6,
     cursor: "not-allowed",
+    background: "rgba(255, 255, 255, 0.7)",
   },
 
   tileSoon: {
-    opacity: 0.65,
+    opacity: 0.7,
+    background: "rgba(255, 255, 255, 0.8)",
+    border: "3px dashed #C9E4CA",
   },
 
   starRow: {
@@ -380,9 +417,9 @@ const styles = {
     marginTop: 2,
   },
   star: {
-    fontSize: 18,
-    color: "rgba(255, 215, 90, 0.98)",
-    textShadow: "0 10px 22px rgba(0,0,0,0.35)",
+    fontSize: 16,
+    color: "#FFD166",
+    textShadow: "0 4px 8px rgba(255, 209, 102, 0.3)",
   },
 
   tileCenter: {
@@ -395,18 +432,18 @@ const styles = {
   },
 
   tileNumber: {
-    fontSize: 38,
+    fontSize: 36,
     fontWeight: 1000,
     letterSpacing: 0.4,
+    color: "#2C3E50",
   },
 
   lockIcon: {
     position: "absolute",
     right: 10,
     bottom: 8,
-    fontSize: 18,
-    opacity: 0.95,
-    filter: "drop-shadow(0 10px 20px rgba(0,0,0,0.35))",
+    fontSize: 20,
+    opacity: 0.8,
   },
 
   soonTag: {
@@ -417,32 +454,40 @@ const styles = {
     fontSize: 11,
     fontWeight: 1000,
     letterSpacing: 1.2,
-    opacity: 0.85,
+    color: "#5D6D7E",
     borderRadius: 999,
-    padding: "6px 10px",
-    border: "1px solid rgba(255,255,255,0.14)",
-    background: "rgba(0,0,0,0.20)",
+    padding: "6px 12px",
+    border: "2px solid #C9E4CA",
+    background: "rgba(201, 228, 202, 0.3)",
+    display: "flex",
+    alignItems: "center",
+    gap: 4,
   },
 
   bottomHint: {
     position: "relative",
     marginTop: 6,
-    padding: "10px 12px",
+    padding: "14px 16px",
     borderRadius: 16,
-    border: "1px solid rgba(255,255,255,0.12)",
-    background: "rgba(0,0,0,0.18)",
-    fontSize: 12,
-    opacity: 0.95,
+    border: "2px solid #FFD1DC",
+    background: "rgba(255, 255, 255, 0.9)",
+    fontSize: 14,
+    color: "#2C3E50",
     display: "flex",
     alignItems: "center",
-    gap: 10,
+    gap: 12,
+    fontWeight: 600,
   },
   hintPill: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: 900,
-    padding: "6px 10px",
+    padding: "6px 12px",
     borderRadius: 999,
-    background: "rgba(34,197,94,0.14)",
-    border: "1px solid rgba(34,197,94,0.35)",
+    background: "linear-gradient(135deg, #FFD1DC, #FFB7D5)",
+    border: "2px solid #FFD1DC",
+    color: "#2C3E50",
+    display: "flex",
+    alignItems: "center",
+    gap: 4,
   },
 };
