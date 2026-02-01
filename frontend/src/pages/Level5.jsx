@@ -1,1472 +1,955 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 
 export default function Level5() {
   const navigate = useNavigate();
   
-  // Game state
+  // Game state - simplified
   const [savings, setSavings] = useState(100);
-  const [weeklyIncome, setWeeklyIncome] = useState(20);
   const [creditDebt, setCreditDebt] = useState(0);
-  const [creditInterest, setCreditInterest] = useState(0);
   const [week, setWeek] = useState(1);
   const [score, setScore] = useState(0);
-  const [coins, setCoins] = useState(0);
   const [gameCompleted, setGameCompleted] = useState(false);
-  const [lessonCompleted, setLessonCompleted] = useState(false);
+  const [currentStep, setCurrentStep] = useState(1);
+  const [showTooltip, setShowTooltip] = useState(null);
+  const [weeklyIncome] = useState(20);
+  const [showIncomeAnimation, setShowIncomeAnimation] = useState(false);
   
-  // Animation states
-  const [moneyAnimation, setMoneyAnimation] = useState(false);
-  const [debtAnimation, setDebtAnimation] = useState(false);
-  const [sparkles, setSparkles] = useState([]);
-  const [showConfetti, setShowConfetti] = useState(false);
-  
-  // Step management
-  const [currentStep, setCurrentStep] = useState(1); // 1: Intro, 2: Scenario, 3: Results
-  const [stepFeedback, setStepFeedback] = useState("");
-  const [stepExplanation, setStepExplanation] = useState("");
-  const [currentChoice, setCurrentChoice] = useState("");
-  const [showNextButton, setShowNextButton] = useState(false);
-  
-  // Scenarios with more detail
+  // Simple scenarios with more emojis
   const scenarios = [
     {
       id: 1,
       title: "📱 Phone Emergency",
-      description: "Your phone slipped and the screen shattered! You need it for school and contacting family.",
+      description: "Oh no! Your phone screen broke! 😱 Need to fix it.",
       cost: 60,
-      week: 1,
+      emoji: "📱💥",
       options: [
         { 
           id: "pay", 
-          label: "🛡️ Use Emergency Fund", 
-          description: "Pay $60 from savings. This is what savings are for!" 
+          emoji: "🛡️💰", 
+          label: "Use Savings", 
+          desc: "Pay $60 from your emergency fund",
+          feedback: "Smart choice! That's what emergency savings are for! 🎉"
         },
         { 
           id: "credit", 
-          label: "💳 Use Credit Card", 
-          description: "Charge $60 to credit card. Pay later with interest." 
+          emoji: "💳😰", 
+          label: "Use Credit", 
+          desc: "Charge $60 to credit card (+ interest)",
+          feedback: "Uh oh! Credit cards charge extra money called interest. 💸"
         },
         { 
           id: "skip", 
-          label: "📞 Use Backup Phone", 
-          description: "Use old phone temporarily. Save money but less convenient." 
+          emoji: "📞✨", 
+          label: "Use Old Phone", 
+          desc: "Dig up your old phone temporarily",
+          feedback: "Creative thinking! You saved money by being resourceful! 🌟"
         }
-      ],
-      consequences: {
-        pay: "Phone fixed immediately. Savings used properly!",
-        credit: "Phone fixed but debt added. Interest will grow if not paid.",
-        skip: "Saved money but phone is slow. Good short-term solution."
-      }
+      ]
     },
     {
       id: 2,
-      title: "💼 Income Interruption",
-      description: "Your part-time job at the cafe closed for renovations this week. No paycheck!",
-      cost: 20, // Lost income
-      week: 2,
+      title: "💼 No Paycheck This Week",
+      description: "Your part-time job closed this week. 😔 No money coming in!",
+      cost: 20,
+      emoji: "💼❌",
       options: [
         { 
           id: "savings", 
-          label: "💰 Use Savings", 
-          description: "Withdraw $20 from emergency fund for expenses" 
+          emoji: "💰🏦", 
+          label: "Use Savings", 
+          desc: "Take $20 from emergency fund",
+          feedback: "Good job! Emergencies aren't just big things - this counts too! 👍"
         },
         { 
           id: "credit", 
-          label: "📝 Charge Expenses", 
-          description: "Put $20 of expenses on credit card" 
+          emoji: "💳📝", 
+          label: "Use Credit Card", 
+          desc: "Put $20 on credit card",
+          feedback: "Credit cards seem easy but they cost more later! 📈"
         },
         { 
           id: "parents", 
-          label: "👨‍👩‍👧 Ask for Help", 
-          description: "Parents help cover this week's expenses" 
+          emoji: "👨‍👩‍👧❤️", 
+          label: "Ask Family", 
+          desc: "Ask family for help",
+          feedback: "Great! Asking for help is smart when you need it! 🤗"
         }
-      ],
-      consequences: {
-        savings: "Emergency fund working! Covered expenses without debt.",
-        credit: "More debt added. Credit score might be affected.",
-        parents: "Family helped out. No debt but relying on others."
-      }
+      ]
     },
     {
       id: 3,
-      title: "🎉 Social Pressure",
-      description: "Best friend's birthday party at arcade + pizza. Everyone is going!",
+      title: "🎮 Friend's Birthday Party",
+      description: "Your bestie's birthday is at the arcade! 🎉 It costs money to go.",
       cost: 15,
-      week: 3,
+      emoji: "🎂🎮",
       options: [
         { 
           id: "pay", 
-          label: "🎯 Use Savings", 
-          description: "Spend $15 from savings for fun with friends" 
+          emoji: "🎯💵", 
+          label: "Use Savings", 
+          desc: "Spend $15 from savings for fun",
+          feedback: "It's okay to use savings for fun sometimes! Balance is key! ⚖️"
         },
         { 
           id: "credit", 
-          label: "💸 Put on Credit", 
-          description: "Charge $15 to credit. Fun now, pay later." 
+          emoji: "💸💳", 
+          label: "Use Credit", 
+          desc: "Charge $15 to credit card",
+          feedback: "Be careful! Credit cards for fun can lead to big debt later! 😬"
         },
         { 
           id: "skip", 
-          label: "🎁 Homemade Gift", 
-          description: "Make a card & gift. Celebrate differently." 
+          emoji: "🎁✂️", 
+          label: "Make Gift", 
+          desc: "Make a homemade gift instead",
+          feedback: "Awesome! Homemade gifts are special AND you saved money! 💝"
         }
-      ],
-      consequences: {
-        pay: "Had fun with friends! Responsible spending.",
-        credit: "More debt for entertainment. Could add up.",
-        skip: "Creative solution! Saved money & still celebrated."
-      }
+      ]
     }
   ];
   
   const [currentScenarioIndex, setCurrentScenarioIndex] = useState(0);
-  const [scenarioHistory, setScenarioHistory] = useState([]);
-  const [showIncome, setShowIncome] = useState(false);
-  const [currentScenarioCompleted, setCurrentScenarioCompleted] = useState(false);
-  
-  const currentScenario = scenarios[currentScenarioIndex];
-  
-  // Create sparkles
+  const [choiceMade, setChoiceMade] = useState(false);
+  const [feedback, setFeedback] = useState("");
+  const [sparkles, setSparkles] = useState([]);
+
+  // Tooltip content for each stat
+  const tooltips = {
+    savings: {
+      title: "💰 Emergency Savings",
+      content: "This is your SAFETY MONEY! 🛡️\n\nIt's like a superhero shield for surprise problems!\n\n✨ Use it for:\n• Broken things 🔧\n• Medical needs 🏥\n• Lost income 💼\n• Real emergencies 🚨\n\nTip: Try to keep saving more!",
+      color: "#4caf50"
+    },
+    debt: {
+      title: "💳 Credit Debt",
+      content: "This is BORROWED MONEY! 😰\n\nWhen you use a credit card, you're borrowing money that you have to pay back... PLUS EXTRA! 📈\n\n⚠️ The extra is called 'INTEREST'\n\nExample: Borrow $50 → Pay back $55+\n\nTip: Try to keep this at $0!",
+      color: "#f44336"
+    },
+    week: {
+      title: "📅 Week Counter",
+      content: "This shows how many weeks you've played! 🗓️\n\nEach week brings a NEW CHALLENGE!\n\nYou'll face 3 different scenarios to practice making smart money choices.\n\n🎯 Goal: Make it through all 3 weeks with money left!",
+      color: "#2196f3"
+    },
+    score: {
+      title: "⭐ Your Score",
+      content: "POINTS for smart choices! 🏆\n\n🌟 Get points for:\n• Using savings wisely (+25)\n• Creative solutions (+20)\n• Avoiding credit cards\n\n😬 Lose points for:\n• Using credit cards (-10)\n\nTry to get the highest score!",
+      color: "#ff9800"
+    }
+  };
+
+  // Create sparkle animation
   const createSparkles = () => {
     const newSparkles = [];
-    for (let i = 0; i < 15; i++) {
+    for (let i = 0; i < 12; i++) {
       newSparkles.push({
         id: i,
         x: Math.random() * 100,
         y: Math.random() * 100,
-        size: Math.random() * 10 + 5,
-        duration: Math.random() * 1 + 0.5
+        size: Math.random() * 8 + 4
       });
     }
     setSparkles(newSparkles);
     setTimeout(() => setSparkles([]), 1000);
   };
-  
-  // Handle Next button click
-  const handleNextStep = () => {
+
+  // Handle choice
+  const handleChoice = (choiceId) => {
+    const scenario = scenarios[currentScenarioIndex];
+    const option = scenario.options.find(opt => opt.id === choiceId);
+    
+    let newSavings = savings;
+    let newCreditDebt = creditDebt;
+    let newScore = score;
+    
+    if (choiceId === "pay" || choiceId === "savings") {
+      if (savings >= scenario.cost) {
+        newSavings = savings - scenario.cost;
+        newScore += 25;
+        if (newSavings > 0) createSparkles();
+      }
+    } else if (choiceId === "credit") {
+      newCreditDebt = creditDebt + scenario.cost;
+      newScore -= 10;
+    } else {
+      newScore += 20;
+      createSparkles();
+    }
+    
+    setSavings(newSavings);
+    setCreditDebt(newCreditDebt);
+    setScore(newScore);
+    setFeedback(option.feedback);
+    setChoiceMade(true);
+  };
+
+  // Handle next step
+  const handleNext = () => {
     if (currentStep === 1) {
       setCurrentStep(2);
-    } else if (currentStep === 2 && currentScenarioCompleted) {
+    } else if (currentStep === 2 && choiceMade) {
       if (currentScenarioIndex < scenarios.length - 1) {
-        // Move to next scenario
-        setCurrentScenarioIndex(currentScenarioIndex + 1);
-        setWeek(week + 1);
-        setCurrentStep(2);
-        setCurrentScenarioCompleted(false);
-        setCurrentChoice("");
-        setStepFeedback("");
-        setStepExplanation("");
-        setShowNextButton(false);
-        setShowIncome(true);
+        // Show income animation before next week
+        setShowIncomeAnimation(true);
+        setTimeout(() => {
+          setSavings(prev => prev + weeklyIncome);
+          setShowIncomeAnimation(false);
+          createSparkles();
+        }, 500);
+        
+        setTimeout(() => {
+          setCurrentScenarioIndex(prev => prev + 1);
+          setWeek(prev => prev + 1);
+          setChoiceMade(false);
+          setFeedback("");
+        }, 1500);
       } else {
-        // All scenarios completed
         setCurrentStep(3);
-        endGame();
+        setGameCompleted(true);
+        createSparkles();
       }
     }
   };
-  
-  // Handle scenario choice
-  const handleChoice = (choiceId) => {
-    setCurrentChoice(choiceId);
-    const scenario = currentScenario;
-    let newSavings = savings;
-    let newCreditDebt = creditDebt;
-    let newCreditInterest = creditInterest;
-    let newScore = score;
-    let message = "";
-    let explanationText = "";
-    let isGoodChoice = false;
-    
-    switch(choiceId) {
-      case "pay":
-      case "savings":
-        if (savings >= scenario.cost) {
-          newSavings = savings - scenario.cost;
-          message = `✅ Emergency fund worked! -$${scenario.cost}`;
-          explanationText = scenario.consequences[choiceId];
-          newScore += 25;
-          isGoodChoice = true;
-          setMoneyAnimation(true);
-          setTimeout(() => setMoneyAnimation(false), 1000);
-        } else {
-          message = `❌ Not enough savings! Need $${scenario.cost}, have $${savings}`;
-          explanationText = "Without enough savings, you might need to use credit or skip.";
-          newScore -= 15;
-        }
-        break;
-        
-      case "credit":
-        newCreditDebt = creditDebt + scenario.cost;
-        // If debt goes over $40, add interest (more realistic)
-        if (newCreditDebt > 40) {
-          const interest = scenario.cost * 0.15; // 15% interest
-          newCreditInterest = creditInterest + interest;
-          message = `⚠️ Added debt: $${scenario.cost} + $${interest.toFixed(2)} interest`;
-          explanationText = scenario.consequences[choiceId] + ` Interest grows debt faster!`;
-          newScore -= 20;
-          setDebtAnimation(true);
-          setTimeout(() => setDebtAnimation(false), 1000);
-        } else {
-          message = `📝 Charged $${scenario.cost} to credit`;
-          explanationText = scenario.consequences[choiceId];
-          newScore -= 10;
-        }
-        break;
-        
-      case "skip":
-      case "parents":
-        message = `👍 Smart choice! Saved $${scenario.cost}`;
-        explanationText = scenario.consequences[choiceId];
-        newScore += 20;
-        isGoodChoice = true;
-        if (isGoodChoice) createSparkles();
-        break;
-    }
-    
-    // Add to history
-    setScenarioHistory([...scenarioHistory, {
-      scenario: scenario.title,
-      choice: scenario.options.find(o => o.id === choiceId)?.label,
-      cost: scenario.cost,
-      result: message,
-      explanation: explanationText
-    }]);
-    
-    // Update state
-    setSavings(newSavings);
-    setCreditDebt(newCreditDebt);
-    setCreditInterest(newCreditInterest);
-    setScore(newScore);
-    setStepFeedback(message);
-    setStepExplanation(explanationText);
-    setCurrentScenarioCompleted(true);
-    setShowNextButton(true);
-  };
-  
-  // End game and calculate results
-  // End game and calculate results
-const endGame = () => {
-  let finalScore = score;
-  let finalCoins = 0;
-  let finalMessage = "";
-  
-  // Calculate coins (30-60 range)
-  finalCoins = Math.max(30, Math.min(60, Math.floor(finalScore / 3)));
-  
-  // Bonus for having savings left - INCREASED BONUS
-    if (savings >= 70) {
-        finalScore += 40; // Increased from 30
-        finalMessage = "🎉 PERFECT SCORE! You're an emergency fund master!";
-    } else if (savings > 50) {
-        finalScore += 30;
-        finalMessage = "🎉 Excellent! You handled emergencies like a pro!";
-    } else if (savings > 0) {
-        finalScore += 20; // Increased from 10
-        finalMessage = "👍 Well done! You made smart choices and avoided debt.";
-    } else {
-        finalMessage = "💡 Good effort! Remember: build savings before emergencies happen.";
-    }
-  
-  setScore(finalScore);
-  setCoins(finalCoins);
-  setGameCompleted(true);
-  setShowConfetti(true);
-  
-  // Mark lesson as completed - IMPORTANT: Save with star rating
-  if (!lessonCompleted) {
-    setLessonCompleted(true);
-    
-    // Save that level 5 is completed
-    localStorage.setItem("finlingo_last_completed_level", "5");
-    localStorage.setItem("finlingo_unlocked_level", "6");
-    
-    // Save star rating for level 5
-    let stars = 1; // Default 1 star
-    if (savings >= 70) {
-      stars = 3; // 3 stars for excellent savings
-    } else if (savings >= 40) {
-      stars = 2; // 2 stars for good savings
-    }
-    
-    // Save level 5 stars
-    const levelStars = JSON.parse(localStorage.getItem("finlingo_level_stars") || "{}");
-    levelStars["5"] = stars;
-    localStorage.setItem("finlingo_level_stars", JSON.stringify(levelStars));
-    
-    // Save total coins
-    const currentTotalCoins = parseInt(localStorage.getItem("finlingo_total_coins") || "0");
-    localStorage.setItem("finlingo_total_coins", (currentTotalCoins + finalCoins).toString());
-    
-    setTimeout(() => setShowConfetti(false), 5000);
-  }
-};
-  
-  // Add weekly income
-  useEffect(() => {
-    if (showIncome && week > 1) {
-      const timer = setTimeout(() => {
-        setSavings(prev => prev + weeklyIncome);
-        setShowIncome(false);
-        createSparkles();
-      }, 800);
-      return () => clearTimeout(timer);
-    }
-  }, [showIncome, week, weeklyIncome]);
-  
+
   // Reset game
-  // Reset game - but keep saved progress
-const resetGame = () => {
-  setSavings(100);
-  setWeeklyIncome(20);
-  setCreditDebt(0);
-  setCreditInterest(0);
-  setWeek(1);
-  setScore(0);
-  setCoins(0);
-  setGameCompleted(false);
-  setCurrentScenarioIndex(0);
-  setScenarioHistory([]);
-  setCurrentStep(2); // Start at scenario step, not intro
-  setCurrentChoice("");
-  setStepFeedback("");
-  setStepExplanation("");
-  setCurrentScenarioCompleted(false);
-  setShowNextButton(false);
-  setShowIncome(false);
-  setShowConfetti(false);
-    };
-  
-  const handleBackToHome = () => {
-    navigate("/home");
+  const resetGame = () => {
+    setSavings(100);
+    setCreditDebt(0);
+    setWeek(1);
+    setScore(0);
+    setGameCompleted(false);
+    setCurrentScenarioIndex(0);
+    setCurrentStep(2);
+    setChoiceMade(false);
+    setFeedback("");
+  };
+
+  const currentScenario = scenarios[currentScenarioIndex];
+
+  // Enhanced styles with more colors and fun elements
+  const styles = {
+    page: {
+      fontFamily: "'Comic Sans MS', 'Chalkboard SE', 'Comic Neue', cursive, sans-serif",
+      background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+      padding: "20px",
+      minHeight: "100vh",
+      position: "relative",
+      overflow: "hidden"
+    },
+    header: {
+      textAlign: "center",
+      marginBottom: "30px",
+      backgroundColor: "white",
+      padding: "20px",
+      borderRadius: "20px",
+      boxShadow: "0 8px 16px rgba(0,0,0,0.2)",
+      border: "4px solid #a78bfa",
+      position: "relative",
+      zIndex: 2
+    },
+    title: {
+      background: "linear-gradient(45deg, rgb(173, 145, 245), rgb(136, 111, 250))",
+      WebkitBackgroundClip: "text",
+      WebkitTextFillColor: "transparent",
+      fontSize: "2.5rem",
+      marginBottom: "10px",
+      fontWeight: "bold",
+      textShadow: "2px 2px 4px rgba(0,0,0,0.1)"
+    },
+    stats: {
+      display: "grid",
+      gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
+      gap: "15px",
+      marginBottom: "30px",
+      position: "relative",
+      zIndex: 2
+    },
+    statCard: {
+      backgroundColor: "white",
+      padding: "20px",
+      borderRadius: "20px",
+      textAlign: "center",
+      border: "4px solid",
+      cursor: "pointer",
+      transition: "all 0.3s ease",
+      boxShadow: "0 4px 8px rgba(0,0,0,0.1)",
+      position: "relative",
+      minHeight: "120px",
+      display: "flex",
+      flexDirection: "column",
+      justifyContent: "center"
+    },
+    statEmoji: {
+      fontSize: "3rem",
+      marginBottom: "10px",
+      animation: "bounce 2s infinite",
+      filter: "drop-shadow(0 2px 2px rgba(0,0,0,0.2))"
+    },
+    statLabel: {
+      fontSize: "0.9rem",
+      fontWeight: "bold",
+      color: "#666",
+      marginBottom: "5px"
+    },
+    statValue: {
+      fontSize: "2rem",
+      fontWeight: "bold",
+      textShadow: "1px 1px 2px rgba(0,0,0,0.1)"
+    },
+    scenarioCard: {
+      backgroundColor: "white",
+      padding: "30px",
+      borderRadius: "25px",
+      marginBottom: "20px",
+      border: "5px solid #ff6b6b",
+      boxShadow: "0 8px 16px rgba(0,0,0,0.2)",
+      position: "relative",
+      zIndex: 2
+    },
+    scenarioEmoji: {
+      fontSize: "4rem",
+      textAlign: "center",
+      marginBottom: "15px",
+      animation: "pulse 2s infinite",
+      filter: "drop-shadow(0 4px 4px rgba(0,0,0,0.3))"
+    },
+    options: {
+      display: "grid",
+      gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+      gap: "20px",
+      marginTop: "25px"
+    },
+    option: {
+      backgroundColor: "#f8f9fa",
+      padding: "20px",
+      borderRadius: "20px",
+      border: "4px solid #dee2e6",
+      cursor: "pointer",
+      transition: "all 0.3s ease",
+      textAlign: "center",
+      minHeight: "160px",
+      display: "flex",
+      flexDirection: "column",
+      justifyContent: "space-between"
+    },
+    optionEmoji: {
+      fontSize: "3rem",
+      marginBottom: "10px",
+      animation: "float 3s ease-in-out infinite"
+    },
+    optionLabel: {
+      fontSize: "1.1rem",
+      fontWeight: "bold",
+      color: "#333",
+      marginBottom: "8px",
+      textShadow: "1px 1px 1px rgba(0,0,0,0.1)"
+    },
+    optionDesc: {
+      fontSize: "0.85rem",
+      color: "#666",
+      lineHeight: "1.4"
+    },
+    button: {
+      backgroundColor: "#ff6b6b",
+      color: "white",
+      padding: "15px 30px",
+      border: "none",
+      borderRadius: "50px",
+      fontSize: "18px",
+      fontWeight: "bold",
+      cursor: "pointer",
+      boxShadow: "0 4px 8px rgba(0,0,0,0.2)",
+      transition: "all 0.3s ease",
+      display: "inline-flex",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: "10px"
+    },
+    feedback: {
+      backgroundColor: "#e8f5e9",
+      padding: "20px",
+      borderRadius: "15px",
+      marginTop: "20px",
+      border: "3px solid #4caf50",
+      fontSize: "1.1rem",
+      textAlign: "center",
+      fontWeight: "bold",
+      animation: "slideUp 0.5s ease",
+      boxShadow: "0 4px 8px rgba(76, 175, 80, 0.2)"
+    },
+    tooltip: {
+      position: "fixed",
+      top: "50%",
+      left: "50%",
+      transform: "translate(-50%, -50%)",
+      backgroundColor: "white",
+      padding: "30px",
+      borderRadius: "20px",
+      boxShadow: "0 8px 32px rgba(0,0,0,0.3)",
+      zIndex: 1000,
+      maxWidth: "400px",
+      border: "4px solid",
+      animation: "slideIn 0.3s ease",
+      maxHeight: "80vh",
+      overflowY: "auto"
+    },
+    overlay: {
+      position: "fixed",
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: "rgba(0,0,0,0.5)",
+      zIndex: 999,
+      animation: "fadeIn 0.3s ease"
+    },
+    results: {
+      backgroundColor: "white",
+      padding: "40px",
+      borderRadius: "25px",
+      textAlign: "center",
+      border: "5px solid #feca57",
+      boxShadow: "0 8px 16px rgba(0,0,0,0.2)",
+      position: "relative",
+      zIndex: 2,
+      animation: "scaleIn 0.5s ease"
+    },
+    incomeAlert: {
+      position: "fixed",
+      top: "50%",
+      left: "50%",
+      transform: "translate(-50%, -50%)",
+      backgroundColor: "#4caf50",
+      color: "white",
+      padding: "20px 40px",
+      borderRadius: "20px",
+      fontSize: "1.5rem",
+      fontWeight: "bold",
+      zIndex: 1001,
+      animation: "popIn 0.5s ease, fadeOut 0.5s ease 1s forwards",
+      boxShadow: "0 10px 20px rgba(0,0,0,0.3)",
+      display: "flex",
+      alignItems: "center",
+      gap: "15px"
+    },
+    sparkle: {
+      position: "absolute",
+      background: "radial-gradient(circle, #FFD700, transparent)",
+      borderRadius: "50%",
+      pointerEvents: "none",
+      zIndex: 1
+    },
+    progressContainer: {
+      width: "100%",
+      height: "10px",
+      backgroundColor: "#e0e0e0",
+      borderRadius: "5px",
+      margin: "20px 0",
+      overflow: "hidden"
+    },
+    progressBar: {
+      height: "100%",
+      background: "linear-gradient(90deg, #667eea, #764ba2)",
+      borderRadius: "5px",
+      transition: "width 0.5s ease",
+      width: `${((currentScenarioIndex + (choiceMade ? 1 : 0)) / scenarios.length) * 100}%`
+    },
+    character: {
+      position: "absolute",
+      fontSize: "3rem",
+      animation: "float 6s ease-in-out infinite",
+      zIndex: 1,
+      filter: "drop-shadow(0 4px 4px rgba(0,0,0,0.3))"
+    }
   };
 
   return (
     <div style={styles.page}>
-      <style>{`
-        @keyframes confetti-fall {
-          0% { transform: translateY(0) rotate(0deg); opacity: 1; }
-          100% { transform: translateY(100vh) rotate(360deg); opacity: 0; }
-        }
-        @keyframes sparkle {
-          0% { transform: scale(0); opacity: 1; }
-          100% { transform: scale(1); opacity: 0; }
-        }
-        @keyframes moneyFloat {
-          0% { transform: translateY(0) scale(1); opacity: 1; }
-          100% { transform: translateY(-50px) scale(0.5); opacity: 0; }
-        }
-        @keyframes debtShake {
-          0%, 100% { transform: translateX(0); }
-          25% { transform: translateX(-5px); }
-          75% { transform: translateX(5px); }
-        }
-        @keyframes pulse {
-          0%, 100% { transform: scale(1); opacity: 1; }
-          50% { transform: scale(1.05); opacity: 0.8; }
-        }
-        @keyframes float {
-          0%, 100% { transform: translateY(0); }
-          50% { transform: translateY(-10px); }
-        }
-        .money-animation {
-          animation: moneyFloat 1s ease-out;
-          position: absolute;
-          font-size: 24px;
-          font-weight: bold;
-          color: #4CAF50;
-          pointer-events: none;
-        }
-        .debt-animation {
-          animation: debtShake 0.5s ease;
-        }
-        .pulse { animation: pulse 2s ease-in-out infinite; }
-        .floating { animation: float 3s ease-in-out infinite; }
-        .step-indicator {
-          display: flex;
-          justify-content: center;
-          gap: 15px;
-          margin-bottom: 25px;
-        }
-        .step-dot {
-          width: 16px;
-          height: 16px;
-          border-radius: 50%;
-          background-color: rgba(255,255,255,0.3);
-          border: 2px solid rgba(255,255,255,0.5);
-          transition: all 0.3s ease;
-        }
-        .step-dot.active {
-          background-color: #9370db;
-          transform: scale(1.3);
-          box-shadow: 0 0 10px rgba(147, 112, 219, 0.5);
-        }
-        .step-dot.completed {
-          background-color: #4CAF50;
-        }
-        .instructions-list li {
-          margin-bottom: 10px;
-          line-height: 1.5;
-        }
-      `}</style>
+      {/* Animated background characters */}
+      <div style={{...styles.character, top: "10%", left: "5%", animationDelay: "0s"}}>🦸‍♂️</div>
+      <div style={{...styles.character, top: "15%", right: "10%", animationDelay: "1s"}}>💰</div>
+      <div style={{...styles.character, bottom: "20%", left: "15%", animationDelay: "2s"}}>🛡️</div>
+      <div style={{...styles.character, bottom: "10%", right: "5%", animationDelay: "3s"}}>🎯</div>
 
-      {/* Confetti */}
-      {showConfetti && [...Array(80)].map((_, i) => (
-        <div
-          key={i}
-          className="confetti"
-          style={{
-            left: `${Math.random() * 100}vw`,
-            backgroundColor: ['#FFD700', '#9370db', '#7b68ee', '#6a5acd', '#4b0082'][Math.floor(Math.random() * 5)],
-            animation: `confetti-fall ${1 + Math.random() * 2}s linear forwards`,
-            animationDelay: `${Math.random() * 0.5}s`,
-            width: `${8 + Math.random() * 12}px`,
-            height: `${8 + Math.random() * 12}px`,
-            borderRadius: Math.random() > 0.5 ? '50%' : '0',
-            position: 'fixed',
-            top: '-20px',
-            zIndex: 9999,
-          }}
-        />
-      ))}
-      
-      {/* Sparkles */}
+      {/* Sparkles animation */}
       {sparkles.map(sparkle => (
         <div
           key={sparkle.id}
           style={{
-            position: 'absolute',
+            ...styles.sparkle,
             left: `${sparkle.x}%`,
             top: `${sparkle.y}%`,
             width: `${sparkle.size}px`,
             height: `${sparkle.size}px`,
-            background: 'radial-gradient(circle, #FFD700, transparent)',
-            borderRadius: '50%',
-            animation: `sparkle ${sparkle.duration}s ease-out`,
-            pointerEvents: 'none',
+            animation: `sparkle ${0.5 + Math.random()}s ease-out`
           }}
         />
       ))}
 
+      {/* Income Alert Animation */}
+      {showIncomeAnimation && (
+        <div style={styles.incomeAlert}>
+          <span style={{fontSize: "2rem"}}>💰</span>
+          Weekly Income: +${weeklyIncome}
+          <span style={{fontSize: "2rem"}}>🎉</span>
+        </div>
+      )}
+
+      {/* Tooltip Overlay */}
+      {showTooltip && (
+        <>
+          <div style={styles.overlay} onClick={() => setShowTooltip(null)} />
+          <div style={{...styles.tooltip, borderColor: tooltips[showTooltip].color}}>
+            <h2 style={{marginTop: 0, color: tooltips[showTooltip].color, fontSize: "1.5rem"}}>
+              {tooltips[showTooltip].title}
+            </h2>
+            <p style={{whiteSpace: "pre-line", lineHeight: "1.6", fontSize: "1rem", color: "#333"}}>
+              {tooltips[showTooltip].content}
+            </p>
+            <button 
+              onClick={() => setShowTooltip(null)} 
+              style={{...styles.button, marginTop: "15px", backgroundColor: tooltips[showTooltip].color}}
+              onMouseOver={(e) => e.target.style.transform = "scale(1.05)"}
+              onMouseOut={(e) => e.target.style.transform = "scale(1)"}
+            >
+              Got it! ✓
+            </button>
+          </div>
+        </>
+      )}
+
       {/* Back Button */}
-      <div style={styles.header}>
-        <button style={styles.backButton} onClick={handleBackToHome}>
-          ← Back to Home
-        </button>
-      </div>
+      <button 
+        onClick={() => navigate("/home")}
+        style={{...styles.button, backgroundColor: "#6c5ce7", marginBottom: "20px"}}
+        onMouseOver={(e) => e.target.style.transform = "scale(1.05)"}
+        onMouseOut={(e) => e.target.style.transform = "scale(1)"}
+      >
+        ← 🏠 Back Home
+      </button>
 
       {/* Main Header */}
-      <header style={styles.mainHeader}>
-        <h1 style={styles.mainTitle}>🆘 Level 5: Emergency Fund Challenge</h1>
-        <p style={styles.mainSubtitle}>Learn to handle unexpected expenses without going broke!</p>
+      <header style={styles.header}>
+        <h1 style={styles.title}>💰 Emergency Fund Adventure! 💰</h1>
+        <p style={{fontSize: "1.2rem", color: "#666"}}>Learn to handle money surprises like a superhero! 🦸‍♀️🦸‍♂️</p>
+        
+        {/* Progress Bar */}
+        <div style={styles.progressContainer}>
+          <div style={styles.progressBar} />
+        </div>
+        <p style={{fontSize: "0.9rem", color: "#666", marginTop: "5px"}}>
+          Progress: {currentScenarioIndex + (choiceMade ? 1 : 0)} of {scenarios.length} scenarios
+        </p>
       </header>
 
-      {/* Stats Bar */}
-      <div style={styles.statsContainer}>
-        <div style={styles.statCards}>
-          <div style={styles.statCard}>
-            <span className="floating" style={styles.statIcon}>💰</span>
-            <div style={styles.statContent}>
-              <h3 style={styles.statLabel}>Emergency Savings</h3>
-              <p style={styles.statValue}>${savings}</p>
-            </div>
-          </div>
-          
-          <div style={styles.statCard}>
-            <span className="floating" style={styles.statIcon}>💳</span>
-            <div style={styles.statContent}>
-              <h3 style={styles.statLabel}>Credit Debt</h3>
-              <p style={styles.statValue}>${creditDebt}</p>
-              {creditInterest > 0 && (
-                <p style={styles.interestText}>+${creditInterest.toFixed(2)} interest</p>
-              )}
-            </div>
-          </div>
-          
-          <div style={styles.statCard}>
-            <span className="floating" style={styles.statIcon}>📅</span>
-            <div style={styles.statContent}>
-              <h3 style={styles.statLabel}>Week</h3>
-              <p style={styles.statValue}>{week}/3</p>
-            </div>
-          </div>
-          
-          <div style={styles.statCard}>
-            <span className="floating" style={styles.statIcon}>⭐</span>
-            <div style={styles.statContent}>
-              <h3 style={styles.statLabel}>Score</h3>
-              <p style={styles.statValue}>{score}</p>
-            </div>
-          </div>
+      {/* Stats - Now Clickable! */}
+      <div style={styles.stats}>
+        <div 
+          style={{...styles.statCard, borderColor: "#4caf50"}}
+          onClick={() => setShowTooltip('savings')}
+          onMouseOver={(e) => {
+            e.currentTarget.style.transform = "translateY(-5px) scale(1.02)";
+            e.currentTarget.style.boxShadow = "0 8px 16px rgba(76, 175, 80, 0.3)";
+          }}
+          onMouseOut={(e) => {
+            e.currentTarget.style.transform = "translateY(0) scale(1)";
+            e.currentTarget.style.boxShadow = "0 4px 8px rgba(0,0,0,0.1)";
+          }}
+        >
+          <div style={styles.statEmoji}>💰</div>
+          <div style={styles.statLabel}>Emergency Savings</div>
+          <div style={{...styles.statValue, color: "#4caf50"}}>${savings}</div>
+          <div style={{fontSize: "0.8rem", color: "#999", marginTop: "5px"}}>👆 Click to learn!</div>
+        </div>
+        
+        <div 
+          style={{...styles.statCard, borderColor: "#f44336"}}
+          onClick={() => setShowTooltip('debt')}
+          onMouseOver={(e) => {
+            e.currentTarget.style.transform = "translateY(-5px) scale(1.02)";
+            e.currentTarget.style.boxShadow = "0 8px 16px rgba(244, 67, 54, 0.3)";
+          }}
+          onMouseOut={(e) => {
+            e.currentTarget.style.transform = "translateY(0) scale(1)";
+            e.currentTarget.style.boxShadow = "0 4px 8px rgba(0,0,0,0.1)";
+          }}
+        >
+          <div style={styles.statEmoji}>💳</div>
+          <div style={styles.statLabel}>Credit Debt</div>
+          <div style={{...styles.statValue, color: "#f44336"}}>${creditDebt}</div>
+          <div style={{fontSize: "0.8rem", color: "#999", marginTop: "5px"}}>👆 Click to learn!</div>
+        </div>
+        
+        <div 
+          style={{...styles.statCard, borderColor: "#2196f3"}}
+          onClick={() => setShowTooltip('week')}
+          onMouseOver={(e) => {
+            e.currentTarget.style.transform = "translateY(-5px) scale(1.02)";
+            e.currentTarget.style.boxShadow = "0 8px 16px rgba(33, 150, 243, 0.3)";
+          }}
+          onMouseOut={(e) => {
+            e.currentTarget.style.transform = "translateY(0) scale(1)";
+            e.currentTarget.style.boxShadow = "0 4px 8px rgba(0,0,0,0.1)";
+          }}
+        >
+          <div style={styles.statEmoji}>📅</div>
+          <div style={styles.statLabel}>Week</div>
+          <div style={{...styles.statValue, color: "#2196f3"}}>{week}/3</div>
+          <div style={{fontSize: "0.8rem", color: "#999", marginTop: "5px"}}>👆 Click to learn!</div>
+        </div>
+        
+        <div 
+          style={{...styles.statCard, borderColor: "#ff9800"}}
+          onClick={() => setShowTooltip('score')}
+          onMouseOver={(e) => {
+            e.currentTarget.style.transform = "translateY(-5px) scale(1.02)";
+            e.currentTarget.style.boxShadow = "0 8px 16px rgba(255, 152, 0, 0.3)";
+          }}
+          onMouseOut={(e) => {
+            e.currentTarget.style.transform = "translateY(0) scale(1)";
+            e.currentTarget.style.boxShadow = "0 4px 8px rgba(0,0,0,0.1)";
+          }}
+        >
+          <div style={styles.statEmoji}>⭐</div>
+          <div style={styles.statLabel}>Score</div>
+          <div style={{...styles.statValue, color: "#ff9800"}}>{score}</div>
+          <div style={{fontSize: "0.8rem", color: "#999", marginTop: "5px"}}>👆 Click to learn!</div>
         </div>
       </div>
 
-      {/* Step Indicator */}
-      <div className="step-indicator">
-        {[1, 2, 3].map((step) => (
-          <div 
-            key={step} 
-            className={`step-dot ${currentStep > step ? 'completed' : ''} ${currentStep === step ? 'active' : ''}`}
-          />
-        ))}
-      </div>
-
-      {/* Main Content */}
-      <main style={styles.mainContent}>
-        {currentStep === 1 && (
-          <section style={styles.introSection}>
-            <div style={styles.introCard}>
-              <div style={styles.introHeader}>
-                <span style={styles.introIcon}>🛡️</span>
-                <h2 style={styles.introTitle}>Welcome to Emergency Fund Training!</h2>
-              </div>
-              
-              <div style={styles.introContent}>
-                <p style={styles.introText}>
-                  Life is full of surprises! Learn how to handle unexpected expenses without stress.
-                </p>
-                
-                <div style={styles.instructionsBox}>
-                  <h3 style={styles.instructionsTitle}>📚 How to Play:</h3>
-                  <ul className="instructions-list">
-                    <li>You start with <strong>${savings} emergency savings</strong></li>
-                    <li>Earn <strong>${weeklyIncome}/week</strong> income</li>
-                    <li>Each week brings an unexpected expense</li>
-                    <li>Choose the best way to handle it</li>
-                    <li>Try to keep savings healthy!</li>
-                  </ul>
-                </div>
-                
-                <div style={styles.tipsBox}>
-                  <h3 style={styles.tipsTitle}>💡 Key Tips:</h3>
-                  <div style={styles.tipsGrid}>
-                    <div style={styles.tipCard}>
-                      <span style={styles.tipIcon}>🛡️</span>
-                      <p>Use savings for <strong>real emergencies</strong></p>
-                    </div>
-                    <div style={styles.tipCard}>
-                      <span style={styles.tipIcon}>⚠️</span>
-                      <p>Credit cards add <strong>debt + interest</strong></p>
-                    </div>
-                    <div style={styles.tipCard}>
-                      <span style={styles.tipIcon}>🎯</span>
-                      <p>Sometimes <strong>creative solutions</strong> save money</p>
-                    </div>
-                  </div>
-                </div>
-                
-                <button 
-                  style={styles.nextButton}
-                  onClick={handleNextStep}
-                >
-                  Start Challenge ➡️
-                </button>
-              </div>
-            </div>
-          </section>
-        )}
-
-        {currentStep === 2 && !gameCompleted && (
-          <section style={styles.scenarioSection}>
-            {/* Income Alert */}
-            {showIncome && (
-              <div style={styles.incomeAlert} className="pulse">
-                <span style={styles.incomeIcon}>💰</span>
-                Weekly Income Received: <strong>+${weeklyIncome}</strong>
-                <span style={styles.incomeIcon}>💰</span>
-              </div>
-            )}
-
-            {/* Scenario Card */}
-            <div style={styles.scenarioCard}>
-              <div style={styles.scenarioHeader}>
-                <div style={styles.scenarioWeek}>Week {currentScenario.week}</div>
-                <div style={styles.scenarioCost}>${currentScenario.cost}</div>
-              </div>
-              
-              <div style={styles.scenarioContent}>
-                <div style={styles.scenarioIcon}>{currentScenario.title.split(' ')[0]}</div>
-                <h2 style={styles.scenarioTitle}>{currentScenario.title}</h2>
-                <p style={styles.scenarioDescription}>{currentScenario.description}</p>
-                
-                <div style={styles.emergencyBadge}>
-                  ⚠️ Emergency Expense: ${currentScenario.cost}
-                </div>
-              </div>
-              
-              {/* Options */}
-              <div style={styles.optionsGrid}>
-                {currentScenario.options.map((option) => (
-                  <button
-                    key={option.id}
-                    style={{
-                      ...styles.optionCard,
-                      ...(currentChoice === option.id ? {
-                        borderColor: option.id.includes('pay') || option.id.includes('savings') ? '#4CAF50' :
-                                    option.id.includes('credit') ? '#F44336' : '#FF9800',
-                        transform: 'scale(1.02)',
-                        boxShadow: '0 10px 25px rgba(0,0,0,0.2)'
-                      } : {}),
-                      ...(currentScenarioCompleted ? styles.optionDisabled : {})
-                    }}
-                    onClick={() => !currentScenarioCompleted && handleChoice(option.id)}
-                    disabled={currentScenarioCompleted}
-                  >
-                    <div style={styles.optionHeader}>
-                      <div style={styles.optionIcon}>{option.label.split(' ')[0]}</div>
-                      <div style={styles.optionLabel}>{option.label.split(' ').slice(1).join(' ')}</div>
-                    </div>
-                    <div style={styles.optionDescription}>{option.description}</div>
-                    {option.id.includes('credit') && creditDebt > 40 && (
-                      <div style={styles.warningText}>⚠️ Will add 15% interest!</div>
-                    )}
-                  </button>
-                ))}
-              </div>
-              
-              {/* Feedback */}
-              {stepFeedback && (
-                <div style={styles.feedbackBox}>
-                  <h3 style={styles.feedbackTitle}>Your Choice Result:</h3>
-                  <div style={styles.feedbackMessage}>{stepFeedback}</div>
-                  {stepExplanation && (
-                    <div style={styles.explanationBox}>
-                      <strong>Why this matters:</strong> {stepExplanation}
-                    </div>
-                  )}
-                  
-                  {showNextButton && (
-                    <button 
-                      style={styles.nextButton}
-                      onClick={handleNextStep}
-                    >
-                      {currentScenarioIndex < scenarios.length - 1 ? 'Next Week ➡️' : 'See Results ➡️'}
-                    </button>
-                  )}
-                </div>
-              )}
-            </div>
-            
-            {/* Decision History */}
-            {scenarioHistory.length > 0 && (
-              <div style={styles.historyCard}>
-                <h3 style={styles.historyTitle}>📊 Your Decision History:</h3>
-                {scenarioHistory.map((item, index) => (
-                  <div key={index} style={styles.historyItem}>
-                    <div style={styles.historyHeader}>
-                      <strong style={styles.historyScenario}>{item.scenario}</strong>
-                      <span style={styles.historyCost}>${item.cost}</span>
-                    </div>
-                    <div style={styles.historyChoice}>→ {item.choice}</div>
-                    <div style={styles.historyResult}>{item.result}</div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </section>
-        )}
-
-        {currentStep === 3 && gameCompleted && (
-          <section style={styles.resultsSection}>
-            <div style={styles.resultsCard} className="pulse">
-              <div style={styles.resultsHeader}>
-                <h2 style={styles.resultsTitle}>🎓 Emergency Fund Mastered!</h2>
-                <div style={styles.coinsBadge}>
-                  <span style={styles.coinsIcon}>🪙</span>
-                  {coins} Coins Earned!
-                </div>
-              </div>
-              
-              <div style={styles.resultsGrid}>
-                <div style={styles.resultCard}>
-                  <div style={styles.resultIcon}>💰</div>
-                  <div style={styles.resultLabel}>Final Savings</div>
-                  <div style={styles.resultValue}>${savings}</div>
-                  <div style={styles.resultSubtext}>
-                    {savings >= 70 ? "Excellent! 🏆" : savings >= 40 ? "Good! 👍" : "Keep building! 💪"}
-                  </div>
-                </div>
-                
-                <div style={styles.resultCard}>
-                  <div style={styles.resultIcon}>💳</div>
-                  <div style={styles.resultLabel}>Credit Debt</div>
-                  <div style={styles.resultValue}>${creditDebt}</div>
-                  <div style={styles.resultSubtext}>
-                    {creditDebt === 0 ? "Debt-free! 🎉" : creditDebt <= 30 ? "Manageable" : "High debt ⚠️"}
-                  </div>
-                </div>
-                
-                <div style={styles.resultCard}>
-                  <div style={styles.resultIcon}>⭐</div>
-                  <div style={styles.resultLabel}>Final Score</div>
-                  <div style={styles.resultValue}>{score}</div>
-                  <div style={styles.resultSubtext}>
-                    {score >= 80 ? "A+ Performance!" : score >= 60 ? "Good Job!" : "Learning!"}
-                  </div>
-                </div>
-              </div>
-              
-              <div style={styles.lessonBox}>
-                <h3 style={styles.lessonTitle}>📚 Key Lessons Learned:</h3>
-                <div style={styles.lessonGrid}>
-                  <div style={styles.lessonItem}>
-                    <div style={styles.lessonIcon}>🛡️</div>
-                    <div>
-                      <strong>Emergency Fund Purpose:</strong><br />
-                      Save 3-6 months of expenses for real emergencies
-                    </div>
-                  </div>
-                  <div style={styles.lessonItem}>
-                    <div style={styles.lessonIcon}>⚠️</div>
-                    <div>
-                      <strong>Credit Risks:</strong><br />
-                      Interest grows debt fast - use carefully
-                    </div>
-                  </div>
-                  <div style={styles.lessonItem}>
-                    <div style={styles.lessonIcon}>🎯</div>
-                    <div>
-                      <strong>Smart Choices:</strong><br />
-                      Sometimes creative solutions save money
-                    </div>
-                  </div>
-                </div>
-              </div>
-              
-              <div style={styles.finalMessage}>
-                💡 <strong>Real World Tip:</strong> Start building your emergency fund today! 
-                Even $5/week adds up to $260/year.
-              </div>
-              
-              <div style={styles.actionButtons}>
-                <button style={styles.playAgainButton} onClick={resetGame}>
-                  🔄 Play Again
-                </button>
-                <button style={styles.homeButton} onClick={handleBackToHome}>
-                  🏠 Back to Home
-                </button>
-              </div>
-            </div>
-            
-            {lessonCompleted && (
-              <div style={styles.completionBadge} className="pulse">
-                ✅ Level 5 Completed! Unlocked Level 6
-              </div>
-            )}
-          </section>
-        )}
-      </main>
-
-      {/* Footer */}
-      <footer style={styles.footer}>
-        <div style={styles.footerContent}>
-          <p style={styles.footerText}>
-            Remember: An emergency fund is your financial safety net! Build it slowly and use it wisely.
-          </p>
-          <div style={styles.progressBar}>
-            <div 
+      {/* Intro Step */}
+      {currentStep === 1 && (
+        <div style={styles.scenarioCard}>
+          <div style={{fontSize: "5rem", textAlign: "center", marginBottom: "20px", animation: "pulse 2s infinite"}}>
+            🛡️✨🦸‍♂️
+          </div>
+          <h2 style={{fontSize: "2rem", textAlign: "center", color: "#667eea", marginBottom: "20px"}}>
+            Welcome, Money Hero! 🦸
+          </h2>
+          <div style={{backgroundColor: "#f0f4ff", padding: "20px", borderRadius: "15px", marginBottom: "25px"}}>
+            <p style={{fontSize: "1.2rem", lineHeight: "1.8", color: "#555", textAlign: "center"}}>
+              <span style={{color: "#667eea", fontWeight: "bold"}}>Life is full of surprises! 🎉😱</span><br/>
+              Some are good, some are tricky!<br/><br/>
+              <span style={{color: "#4caf50", fontWeight: "bold"}}>Your mission:</span> Learn to handle money emergencies<br/>
+              using your <span style={{color: "#ff6b6b", fontWeight: "bold"}}>EMERGENCY SAVINGS!</span> 💰🛡️<br/><br/>
+              <span style={{color: "#ff9800", fontWeight: "bold"}}>Ready to become a savings superhero?</span>
+            </p>
+          </div>
+          <div style={{textAlign: "center"}}>
+            <button 
+              onClick={handleNext} 
               style={{
-                ...styles.progressFill,
-                width: `${(currentScenarioIndex + (currentScenarioCompleted ? 1 : 0)) / scenarios.length * 100}%`
+                ...styles.button, 
+                marginTop: "20px", 
+                fontSize: "1.3rem",
+                background: "linear-gradient(45deg, #ff6b6b, #ff8e53)",
+                padding: "20px 40px"
               }}
-            />
+              onMouseOver={(e) => e.target.style.transform = "scale(1.1) rotate(2deg)"}
+              onMouseOut={(e) => e.target.style.transform = "scale(1) rotate(0deg)"}
+            >
+              🚀 Start Adventure! →
+            </button>
           </div>
-          <p style={styles.progressText}>
-            Progress: {currentScenarioIndex + (currentScenarioCompleted ? 1 : 0)} of {scenarios.length} scenarios
-          </p>
         </div>
-      </footer>
+      )}
+
+      {/* Game Step */}
+      {currentStep === 2 && !gameCompleted && (
+        <div style={styles.scenarioCard}>
+          <div style={{display: "flex", justifyContent: "space-between", marginBottom: "20px", fontSize: "1.1rem", flexWrap: "wrap", gap: "10px"}}>
+            <span style={{backgroundColor: "#e3f2fd", padding: "12px 24px", borderRadius: "25px", fontWeight: "bold", border: "3px solid #2196f3"}}>
+              📅 Week {week} of 3
+            </span>
+            <span style={{backgroundColor: "#fff3e0", padding: "12px 24px", borderRadius: "25px", fontWeight: "bold", border: "3px solid #ff9800"}}>
+              💵 Cost: ${currentScenario.cost}
+            </span>
+            <span style={{backgroundColor: "#f3e5f5", padding: "12px 24px", borderRadius: "25px", fontWeight: "bold", border: "3px solid #9c27b0"}}>
+              💰 Savings: ${savings}
+            </span>
+          </div>
+          
+          <div style={styles.scenarioEmoji}>{currentScenario.emoji}</div>
+          <h2 style={{fontSize: "2rem", color: "#ff6b6b", textAlign: "center", marginBottom: "15px"}}>
+            {currentScenario.title}
+          </h2>
+          <div style={{backgroundColor: "#fff8e1", padding: "20px", borderRadius: "15px", border: "3px dashed #ffb74d"}}>
+            <p style={{fontSize: "1.2rem", textAlign: "center", color: "#555", margin: 0, lineHeight: "1.6"}}>
+              {currentScenario.description}
+            </p>
+          </div>
+          
+          <h3 style={{fontSize: "1.5rem", color: "#667eea", textAlign: "center", margin: "30px 0 20px 0"}}>
+            What will you do? 🤔
+          </h3>
+          
+          <div style={styles.options}>
+            {currentScenario.options.map((option) => (
+              <button
+                key={option.id}
+                style={{
+                  ...styles.option,
+                  borderColor: choiceMade ? "#ccc" : "#6c5ce7",
+                  opacity: choiceMade ? 0.6 : 1,
+                  transform: choiceMade ? "scale(0.95)" : "scale(1)"
+                }}
+                onClick={() => !choiceMade && handleChoice(option.id)}
+                disabled={choiceMade}
+                onMouseOver={(e) => {
+                  if (!choiceMade) {
+                    e.currentTarget.style.transform = "scale(1.05) rotate(1deg)";
+                    e.currentTarget.style.borderColor = "#ff6b6b";
+                    e.currentTarget.style.backgroundColor = "#fff8e1";
+                    e.currentTarget.style.boxShadow = "0 8px 16px rgba(0,0,0,0.2)";
+                  }
+                }}
+                onMouseOut={(e) => {
+                  if (!choiceMade) {
+                    e.currentTarget.style.transform = "scale(1) rotate(0deg)";
+                    e.currentTarget.style.borderColor = "#6c5ce7";
+                    e.currentTarget.style.backgroundColor = "#f8f9fa";
+                    e.currentTarget.style.boxShadow = "none";
+                  }
+                }}
+              >
+                <div style={styles.optionEmoji}>{option.emoji}</div>
+                <div style={styles.optionLabel}>{option.label}</div>
+                <div style={styles.optionDesc}>{option.desc}</div>
+              </button>
+            ))}
+          </div>
+          
+          {choiceMade && (
+            <div style={styles.feedback}>
+              <div style={{fontSize: "2.5rem", marginBottom: "15px", animation: "bounce 1s infinite"}}>
+                {score >= 0 ? "🎉" : "😅"}
+              </div>
+              <p style={{margin: "0 0 20px 0", lineHeight: "1.6"}}>
+                {feedback}
+              </p>
+              <button 
+                onClick={handleNext} 
+                style={{
+                  ...styles.button, 
+                  background: "linear-gradient(45deg, #4caf50, #8bc34a)",
+                  fontSize: "1.2rem",
+                  padding: "15px 35px"
+                }}
+                onMouseOver={(e) => e.target.style.transform = "scale(1.05)"}
+                onMouseOut={(e) => e.target.style.transform = "scale(1)"}
+              >
+                {currentScenarioIndex < scenarios.length - 1 ? "⏭️ Next Week →" : "🏆 See Results →"}
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Results Step */}
+      {currentStep === 3 && gameCompleted && (
+        <div style={styles.results}>
+          <div style={{fontSize: "5rem", marginBottom: "20px", animation: "celebrate 1s ease-in-out infinite"}}>
+            🎊🎉🏆
+          </div>
+          <h2 style={{fontSize: "2.5rem", color: "#feca57", marginBottom: "15px", textShadow: "2px 2px 4px rgba(0,0,0,0.2)"}}>
+            Adventure Complete! ✨
+          </h2>
+          <p style={{fontSize: "1.3rem", color: "#666", marginBottom: "30px"}}>
+            You made it through all 3 weeks! 🎯<br/>
+            Here's how you did:
+          </p>
+          
+          <div style={{display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "25px", margin: "30px 0"}}>
+            <div style={{backgroundColor: "#e8f5e9", padding: "25px", borderRadius: "20px", border: "4px solid #4caf50", boxShadow: "0 6px 12px rgba(76, 175, 80, 0.2)"}}>
+              <div style={{fontSize: "3.5rem", marginBottom: "15px", animation: "float 3s ease-in-out infinite"}}>💰</div>
+              <div style={{fontWeight: "bold", marginBottom: "8px", fontSize: "1.1rem", color: "#333"}}>Final Savings</div>
+              <div style={{fontSize: "2.5rem", fontWeight: "bold", color: "#4caf50", marginBottom: "10px"}}>${savings}</div>
+              <div style={{fontSize: "1rem", color: "#666", padding: "8px", backgroundColor: "white", borderRadius: "10px"}}>
+                {savings >= 80 ? "🌟 Excellent! You're a savings pro!" : savings >= 50 ? "👍 Good job! Keep it up!" : "💪 Great start! Practice makes perfect!"}
+              </div>
+            </div>
+            
+            <div style={{backgroundColor: "#ffebee", padding: "25px", borderRadius: "20px", border: "4px solid #f44336", boxShadow: "0 6px 12px rgba(244, 67, 54, 0.2)"}}>
+              <div style={{fontSize: "3.5rem", marginBottom: "15px", animation: "float 3s ease-in-out infinite", animationDelay: "0.5s"}}>💳</div>
+              <div style={{fontWeight: "bold", marginBottom: "8px", fontSize: "1.1rem", color: "#333"}}>Final Debt</div>
+              <div style={{fontSize: "2.5rem", fontWeight: "bold", color: "#f44336", marginBottom: "10px"}}>${creditDebt}</div>
+              <div style={{fontSize: "1rem", color: "#666", padding: "8px", backgroundColor: "white", borderRadius: "10px"}}>
+                {creditDebt === 0 ? "🎉 Perfect! Debt-free champion!" : creditDebt < 50 ? "😊 Not bad! Keep practicing!" : "⚠️ Try to avoid credit next time!"}
+              </div>
+            </div>
+            
+            <div style={{backgroundColor: "#fff3e0", padding: "25px", borderRadius: "20px", border: "4px solid #ff9800", boxShadow: "0 6px 12px rgba(255, 152, 0, 0.2)"}}>
+              <div style={{fontSize: "3.5rem", marginBottom: "15px", animation: "float 3s ease-in-out infinite", animationDelay: "1s"}}>⭐</div>
+              <div style={{fontWeight: "bold", marginBottom: "8px", fontSize: "1.1rem", color: "#333"}}>Final Score</div>
+              <div style={{fontSize: "2.5rem", fontWeight: "bold", color: "#ff9800", marginBottom: "10px"}}>{score}</div>
+              <div style={{fontSize: "1rem", color: "#666", padding: "8px", backgroundColor: "white", borderRadius: "10px"}}>
+                {score >= 60 ? "🏆 Amazing! You're a money master!" : score >= 30 ? "👏 Great! You're learning fast!" : "💪 Good start! You'll get better!"}
+              </div>
+            </div>
+          </div>
+          
+          <div style={{marginBottom: "40px", padding: "25px", backgroundColor: "#e3f2fd", borderRadius: "20px", border: "4px solid #2196f3", boxShadow: "0 6px 12px rgba(33, 150, 243, 0.2)"}}>
+            <p style={{fontSize: "1.4rem", fontWeight: "bold", marginBottom: "20px", color: "#1976d2", textAlign: "center"}}>
+              💡 What You Learned:
+            </p>
+            <div style={{display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "20px"}}>
+              <div style={{backgroundColor: "white", padding: "15px", borderRadius: "15px", border: "2px solid #4caf50"}}>
+                <div style={{fontSize: "2rem", marginBottom: "10px"}}>🛡️</div>
+                <div style={{fontWeight: "bold", marginBottom: "5px"}}>Emergency Savings</div>
+                <div style={{fontSize: "0.9rem", color: "#666"}}>Your safety net for surprises!</div>
+              </div>
+              <div style={{backgroundColor: "white", padding: "15px", borderRadius: "15px", border: "2px solid #f44336"}}>
+                <div style={{fontSize: "2rem", marginBottom: "10px"}}>💸</div>
+                <div style={{fontWeight: "bold", marginBottom: "5px"}}>Credit Costs Extra</div>
+                <div style={{fontSize: "0.9rem", color: "#666"}}>Credit cards charge interest!</div>
+              </div>
+              <div style={{backgroundColor: "white", padding: "15px", borderRadius: "15px", border: "2px solid #ff9800"}}>
+                <div style={{fontSize: "2rem", marginBottom: "10px"}}>💭</div>
+                <div style={{fontWeight: "bold", marginBottom: "5px"}}>Creative Solutions</div>
+                <div style={{fontSize: "0.9rem", color: "#666"}}>Save money by thinking differently!</div>
+              </div>
+            </div>
+          </div>
+          
+          <div style={{display: "flex", gap: "20px", justifyContent: "center", flexWrap: "wrap", marginTop: "20px"}}>
+            <button 
+              onClick={resetGame} 
+              style={{
+                ...styles.button, 
+                backgroundColor: "#4caf50", 
+                fontSize: "1.2rem",
+                padding: "18px 40px",
+                background: "linear-gradient(45deg, #4caf50, #8bc34a)"
+              }}
+              onMouseOver={(e) => e.target.style.transform = "scale(1.05)"}
+              onMouseOut={(e) => e.target.style.transform = "scale(1)"}
+            >
+              🔄 Play Again
+            </button>
+            <button 
+              onClick={() => navigate("/home")} 
+              style={{
+                ...styles.button, 
+                backgroundColor: "#6c5ce7", 
+                fontSize: "1.2rem",
+                padding: "18px 40px",
+                background: "linear-gradient(45deg, #6c5ce7, #a78bfa)"
+              }}
+              onMouseOver={(e) => e.target.style.transform = "scale(1.05)"}
+              onMouseOut={(e) => e.target.style.transform = "scale(1)"}
+            >
+              🏠 Back Home
+            </button>
+          </div>
+        </div>
+      )}
+      
+      <style>
+        {`
+          @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+          }
+          
+          @keyframes slideIn {
+            from {
+              transform: translate(-50%, -50%) scale(0.8);
+              opacity: 0;
+            }
+            to {
+              transform: translate(-50%, -50%) scale(1);
+              opacity: 1;
+            }
+          }
+          
+          @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+          }
+          
+          @keyframes float {
+            0%, 100% { transform: translateY(0) rotate(0deg); }
+            50% { transform: translateY(-15px) rotate(5deg); }
+          }
+          
+          @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.1); opacity: 0.9; }
+          }
+          
+          @keyframes slideUp {
+            from {
+              transform: translateY(20px);
+              opacity: 0;
+            }
+            to {
+              transform: translateY(0);
+              opacity: 1;
+            }
+          }
+          
+          @keyframes scaleIn {
+            from {
+              transform: scale(0.9);
+              opacity: 0;
+            }
+            to {
+              transform: scale(1);
+              opacity: 1;
+            }
+          }
+          
+          @keyframes popIn {
+            0% {
+              transform: translate(-50%, -50%) scale(0);
+              opacity: 0;
+            }
+            70% {
+              transform: translate(-50%, -50%) scale(1.1);
+              opacity: 1;
+            }
+            100% {
+              transform: translate(-50%, -50%) scale(1);
+              opacity: 1;
+            }
+          }
+          
+          @keyframes fadeOut {
+            to {
+              opacity: 0;
+              transform: translate(-50%, -50%) scale(0.9);
+            }
+          }
+          
+          @keyframes sparkle {
+            0% {
+              transform: scale(0);
+              opacity: 1;
+            }
+            100% {
+              transform: scale(1);
+              opacity: 0;
+            }
+          }
+          
+          @keyframes celebrate {
+            0%, 100% {
+              transform: scale(1) rotate(0deg);
+            }
+            25% {
+              transform: scale(1.1) rotate(-10deg);
+            }
+            75% {
+              transform: scale(1.1) rotate(10deg);
+            }
+          }
+          
+          body {
+            margin: 0;
+            padding: 0;
+          }
+        `}
+      </style>
     </div>
   );
-}
-
-const styles = {
-  page: {
-    fontFamily: "'Nunito', 'Comic Sans MS', cursive, sans-serif",
-    backgroundColor: "#f8f5ff",
-    color: "#1a0066",
-    padding: "20px",
-    minHeight: "100vh",
-    backgroundImage: `
-      radial-gradient(circle at 20% 80%, rgba(147, 112, 219, 0.15) 0%, transparent 50%),
-      radial-gradient(circle at 80% 20%, rgba(123, 104, 238, 0.15) 0%, transparent 50%)
-    `,
-  },
-  
-  header: {
-    marginBottom: "25px",
-  },
-  
-  backButton: {
-    padding: "12px 24px",
-    backgroundColor: "#7b68ee",
-    color: "white",
-    border: "none",
-    borderRadius: "12px",
-    fontSize: "16px",
-    fontWeight: "bold",
-    cursor: "pointer",
-    display: "flex",
-    alignItems: "center",
-    gap: "8px",
-    transition: "all 0.3s",
-  },
-  
-  mainHeader: {
-    textAlign: "center",
-    marginBottom: "30px",
-    padding: "25px",
-    backgroundColor: "rgba(255, 255, 255, 0.95)",
-    borderRadius: "20px",
-    boxShadow: "0 8px 25px rgba(123, 104, 238, 0.1)",
-    border: "3px solid #7b68ee",
-    maxWidth: "1100px",
-    marginLeft: "auto",
-    marginRight: "auto",
-  },
-  
-  mainTitle: {
-    fontSize: "2.8rem",
-    marginBottom: "15px",
-    textShadow: "2px 2px 0 rgba(147, 112, 219, 0.2)",
-    background: "linear-gradient(45deg, #9370db, #7b68ee, #6a5acd)",
-    WebkitBackgroundClip: "text",
-    WebkitTextFillColor: "transparent",
-    fontWeight: "900",
-    letterSpacing: "0.5px",
-  },
-  
-  mainSubtitle: {
-    fontSize: "1.2rem",
-    color: "#666",
-    maxWidth: "800px",
-    margin: "0 auto",
-  },
-  
-  statsContainer: {
-    maxWidth: "1100px",
-    margin: "0 auto 30px",
-  },
-  
-  statCards: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-    gap: "20px",
-  },
-  
-  statCard: {
-    display: "flex",
-    alignItems: "center",
-    gap: "15px",
-    padding: "20px",
-    backgroundColor: "#e6e6fa",
-    borderRadius: "18px",
-    border: "2px solid #9370db",
-    boxShadow: "0 4px 12px rgba(147, 112, 219, 0.2)",
-  },
-  
-  statIcon: {
-    fontSize: "35px",
-  },
-  
-  statContent: {
-    flex: 1,
-  },
-  
-  statLabel: {
-    margin: "0 0 5px 0",
-    color: "#6a5acd",
-    fontSize: "1rem",
-  },
-  
-  statValue: {
-    fontSize: "1.8rem",
-    fontWeight: "bold",
-    color: "#6a5acd",
-    margin: 0,
-  },
-  
-  interestText: {
-    fontSize: "0.85rem",
-    color: "#F44336",
-    margin: "5px 0 0 0",
-    fontWeight: "bold",
-  },
-  
-  mainContent: {
-    maxWidth: "1100px",
-    margin: "0 auto",
-  },
-  
-  // Intro Section
-  introSection: {
-    marginBottom: "30px",
-  },
-  
-  introCard: {
-    padding: "30px",
-    borderRadius: "20px",
-    backgroundColor: "rgba(230, 230, 250, 0.95)",
-    border: "3px solid #9370db",
-  },
-  
-  introHeader: {
-    display: "flex",
-    alignItems: "center",
-    gap: "15px",
-    marginBottom: "25px",
-  },
-  
-  introIcon: {
-    fontSize: "40px",
-  },
-  
-  introTitle: {
-    color: "#9370db",
-    fontSize: "2rem",
-    margin: 0,
-    background: "linear-gradient(45deg, #9370db, #7b68ee)",
-    WebkitBackgroundClip: "text",
-    WebkitTextFillColor: "transparent",
-    fontWeight: "700",
-  },
-  
-  introContent: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "25px",
-  },
-  
-  introText: {
-    fontSize: "1.1rem",
-    lineHeight: "1.6",
-    color: "#1a0066",
-  },
-  
-  instructionsBox: {
-    padding: "20px",
-    backgroundColor: "white",
-    borderRadius: "15px",
-    border: "2px solid #d8bfd8",
-  },
-  
-  instructionsTitle: {
-    color: "#9370db",
-    marginTop: 0,
-    marginBottom: "15px",
-  },
-  
-  instructionsList: {
-    margin: 0,
-    paddingLeft: "20px",
-  },
-  
-  tipsBox: {
-    padding: "20px",
-    backgroundColor: "#f0e6ff",
-    borderRadius: "15px",
-  },
-  
-  tipsTitle: {
-    color: "#9370db",
-    marginTop: 0,
-    marginBottom: "20px",
-  },
-  
-  tipsGrid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
-    gap: "15px",
-  },
-  
-  tipCard: {
-    display: "flex",
-    alignItems: "flex-start",
-    gap: "12px",
-    padding: "15px",
-    backgroundColor: "white",
-    borderRadius: "10px",
-    border: "2px solid #e6e6fa",
-  },
-  
-  tipIcon: {
-    fontSize: "24px",
-  },
-  
-  // Scenario Section
-  scenarioSection: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "25px",
-  },
-  
-  incomeAlert: {
-    backgroundColor: "#e8f5e9",
-    border: "2px solid #4CAF50",
-    borderRadius: "50px",
-    padding: "15px 30px",
-    textAlign: "center",
-    fontSize: "18px",
-    fontWeight: "bold",
-    color: "#2E7D32",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: "15px",
-  },
-  
-  incomeIcon: {
-    fontSize: "24px",
-  },
-  
-  scenarioCard: {
-    padding: "30px",
-    borderRadius: "20px",
-    backgroundColor: "rgba(255, 255, 255, 0.95)",
-    border: "3px solid #ba55d3",
-    boxShadow: "0 10px 30px rgba(0,0,0,0.1)",
-  },
-  
-  scenarioHeader: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: "25px",
-  },
-  
-  scenarioWeek: {
-    padding: "10px 25px",
-    backgroundColor: "#ba55d3",
-    color: "white",
-    borderRadius: "50px",
-    fontWeight: "bold",
-    fontSize: "16px",
-  },
-  
-  scenarioCost: {
-    padding: "10px 25px",
-    backgroundColor: "#FF9800",
-    color: "white",
-    borderRadius: "50px",
-    fontWeight: "bold",
-    fontSize: "16px",
-  },
-  
-  scenarioContent: {
-    textAlign: "center",
-    marginBottom: "30px",
-  },
-  
-  scenarioIcon: {
-    fontSize: "50px",
-    marginBottom: "20px",
-  },
-  
-  scenarioTitle: {
-    color: "#ba55d3",
-    fontSize: "2rem",
-    margin: "0 0 20px 0",
-    fontWeight: "800",
-  },
-  
-  scenarioDescription: {
-    fontSize: "1.1rem",
-    lineHeight: "1.6",
-    color: "#1a0066",
-    maxWidth: "800px",
-    margin: "0 auto 25px",
-  },
-  
-  emergencyBadge: {
-    display: "inline-block",
-    backgroundColor: "#FFEBEE",
-    border: "3px solid #F44336",
-    borderRadius: "50px",
-    padding: "15px 30px",
-    fontSize: "18px",
-    fontWeight: "bold",
-    color: "#D32F2F",
-  },
-  
-  optionsGrid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
-    gap: "20px",
-    marginBottom: "30px",
-  },
-  
-  optionCard: {
-    padding: "25px",
-    backgroundColor: "white",
-    borderRadius: "15px",
-    border: "3px solid #e6e6fa",
-    textAlign: "left",
-    cursor: "pointer",
-    transition: "all 0.3s",
-    display: "flex",
-    flexDirection: "column",
-    gap: "15px",
-  },
-  
-  optionDisabled: {
-    opacity: 0.7,
-    cursor: "not-allowed",
-  },
-  
-  optionHeader: {
-    display: "flex",
-    alignItems: "center",
-    gap: "15px",
-  },
-  
-  optionIcon: {
-    fontSize: "32px",
-  },
-  
-  optionLabel: {
-    fontSize: "1.3rem",
-    fontWeight: "bold",
-    color: "#1a0066",
-  },
-  
-  optionDescription: {
-    fontSize: "1rem",
-    lineHeight: "1.5",
-    color: "#666",
-    flex: 1,
-  },
-  
-  warningText: {
-    color: "#F44336",
-    fontSize: "14px",
-    fontWeight: "bold",
-  },
-  
-  feedbackBox: {
-    padding: "25px",
-    backgroundColor: "#f0e6ff",
-    borderRadius: "15px",
-    textAlign: "center",
-  },
-  
-  feedbackTitle: {
-    color: "#ba55d3",
-    marginTop: 0,
-    marginBottom: "15px",
-    fontSize: "1.3rem",
-  },
-  
-  feedbackMessage: {
-    fontSize: "1.2rem",
-    fontWeight: "bold",
-    marginBottom: "15px",
-    lineHeight: "1.5",
-  },
-  
-  explanationBox: {
-    fontSize: "1rem",
-    lineHeight: "1.5",
-    padding: "15px",
-    backgroundColor: "white",
-    borderRadius: "10px",
-    marginBottom: "20px",
-  },
-  
-  nextButton: {
-    padding: "15px 30px",
-    backgroundColor: "#9370db",
-    color: "white",
-    border: "none",
-    borderRadius: "12px",
-    fontSize: "18px",
-    fontWeight: "bold",
-    cursor: "pointer",
-    transition: "all 0.3s",
-  },
-  
-  historyCard: {
-    padding: "25px",
-    backgroundColor: "rgba(255, 255, 255, 0.95)",
-    borderRadius: "20px",
-    border: "3px solid #4682b4",
-  },
-  
-  historyTitle: {
-    color: "#4682b4",
-    marginTop: 0,
-    marginBottom: "20px",
-    fontSize: "1.5rem",
-  },
-  
-  historyItem: {
-    padding: "15px",
-    borderBottom: "2px dashed #e6e6fa",
-  },
-  
-  historyHeader: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: "8px",
-  },
-  
-  historyScenario: {
-    fontSize: "16px",
-  },
-  
-  historyCost: {
-    backgroundColor: "#FF9800",
-    color: "white",
-    padding: "5px 15px",
-    borderRadius: "20px",
-    fontSize: "14px",
-    fontWeight: "bold",
-  },
-  
-  historyChoice: {
-    fontSize: "14px",
-    color: "#666",
-    marginBottom: "5px",
-  },
-  
-  historyResult: {
-    fontSize: "14px",
-    fontWeight: "bold",
-    color: "#4CAF50",
-  },
-  
-  // Results Section
-  resultsSection: {
-    marginBottom: "30px",
-  },
-  
-  resultsCard: {
-    padding: "40px",
-    backgroundColor: "rgba(255, 255, 255, 0.95)",
-    borderRadius: "25px",
-    border: "3px solid #ff9800",
-    boxShadow: "0 15px 40px rgba(0,0,0,0.1)",
-  },
-  
-  resultsHeader: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: "40px",
-    flexWrap: "wrap",
-    gap: "20px",
-  },
-  
-  resultsTitle: {
-    color: "#ff9800",
-    fontSize: "2.5rem",
-    margin: 0,
-    background: "linear-gradient(45deg, #ff9800, #ff5722)",
-    WebkitBackgroundClip: "text",
-    WebkitTextFillColor: "transparent",
-    fontWeight: "900",
-  },
-  
-  coinsBadge: {
-    backgroundColor: "#FFD700",
-    color: "#333",
-    padding: "15px 30px",
-    borderRadius: "50px",
-    fontSize: "1.2rem",
-    fontWeight: "bold",
-    display: "flex",
-    alignItems: "center",
-    gap: "10px",
-    boxShadow: "0 5px 15px rgba(255, 215, 0, 0.4)",
-  },
-  
-  coinsIcon: {
-    fontSize: "24px",
-  },
-  
-  resultsGrid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
-    gap: "25px",
-    marginBottom: "40px",
-  },
-  
-  resultCard: {
-    padding: "25px",
-    backgroundColor: "#f5f5f5",
-    borderRadius: "15px",
-    textAlign: "center",
-    border: "2px solid #e0e0e0",
-  },
-  
-  resultIcon: {
-    fontSize: "40px",
-    marginBottom: "15px",
-  },
-  
-  resultLabel: {
-    fontSize: "16px",
-    color: "#666",
-    marginBottom: "10px",
-  },
-  
-  resultValue: {
-    fontSize: "2rem",
-    fontWeight: "bold",
-    color: "#333",
-    marginBottom: "10px",
-  },
-  
-  resultSubtext: {
-    fontSize: "14px",
-    fontWeight: "600",
-    color: "#666",
-  },
-  
-  lessonBox: {
-    padding: "25px",
-    backgroundColor: "#fff3e0",
-    borderRadius: "15px",
-    marginBottom: "30px",
-  },
-  
-  lessonTitle: {
-    color: "#ef6c00",
-    marginTop: 0,
-    marginBottom: "25px",
-    fontSize: "1.5rem",
-  },
-  
-  lessonGrid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
-    gap: "20px",
-  },
-  
-  lessonItem: {
-    display: "flex",
-    alignItems: "flex-start",
-    gap: "15px",
-    padding: "20px",
-    backgroundColor: "white",
-    borderRadius: "10px",
-  },
-  
-  lessonIcon: {
-    fontSize: "28px",
-    flexShrink: 0,
-  },
-  
-  finalMessage: {
-    padding: "20px",
-    backgroundColor: "#e3f2fd",
-    borderRadius: "15px",
-    marginBottom: "30px",
-    fontSize: "1.1rem",
-    color: "#1565C0",
-    border: "2px solid #2196F3",
-  },
-  
-  actionButtons: {
-    display: "flex",
-    justifyContent: "center",
-    gap: "25px",
-    flexWrap: "wrap",
-  },
-  
-  playAgainButton: {
-    padding: "18px 45px",
-    backgroundColor: "#7b68ee",
-    color: "white",
-    border: "none",
-    borderRadius: "12px",
-    fontSize: "18px",
-    fontWeight: "bold",
-    cursor: "pointer",
-    display: "flex",
-    alignItems: "center",
-    gap: "10px",
-  },
-  
-  homeButton: {
-    padding: "18px 45px",
-    backgroundColor: "#e6e6fa",
-    color: "#7b68ee",
-    border: "3px solid #7b68ee",
-    borderRadius: "12px",
-    fontSize: "18px",
-    fontWeight: "bold",
-    cursor: "pointer",
-    display: "flex",
-    alignItems: "center",
-    gap: "10px",
-  },
-  
-  completionBadge: {
-    display: "inline-block",
-    backgroundColor: "#4CAF50",
-    color: "white",
-    padding: "15px 40px",
-    borderRadius: "50px",
-    fontSize: "1.2rem",
-    fontWeight: "bold",
-    border: "3px solid white",
-    boxShadow: "0 5px 20px rgba(76, 175, 80, 0.4)",
-    marginTop: "30px",
-    textAlign: "center",
-  },
-  
-  footer: {
-    marginTop: "40px",
-    paddingTop: "25px",
-    borderTop: "3px solid #e6e6fa",
-  },
-  
-  footerContent: {
-    maxWidth: "800px",
-    margin: "0 auto",
-    textAlign: "center",
-  },
-  
-  footerText: {
-    fontSize: "1rem",
-    color: "#666",
-    marginBottom: "20px",
-    lineHeight: "1.6",
-  },
-  
-  progressBar: {
-    width: "100%",
-    height: "12px",
-    backgroundColor: "#d8bfd8",
-    borderRadius: "6px",
-    overflow: "hidden",
-    marginBottom: "10px",
-  },
-  
-  progressFill: {
-    height: "100%",
-    backgroundColor: "#9370db",
-    borderRadius: "6px",
-    transition: "width 0.5s ease",
-  },
-  
-  progressText: {
-    fontSize: "0.9rem",
-    color: "#483d8b",
-    fontWeight: "bold",
-  },
-};
-
-// Add hover effects
-if (typeof window !== 'undefined') {
-  const styleSheet = document.styleSheets[0];
-  if (styleSheet) {
-    styleSheet.insertRule(`
-      button:hover:not(:disabled) {
-        transform: translateY(-3px);
-        box-shadow: 0 10px 25px rgba(0,0,0,0.2);
-      }
-    `, styleSheet.cssRules.length);
-  }
 }
