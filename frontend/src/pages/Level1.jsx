@@ -324,16 +324,6 @@ export default function Level1() {
           alignItems: "center",
           gap: "15px",
         }}>
-          <div style={{
-            padding: "10px 15px",
-            backgroundColor: "rgba(255, 255, 255, 0.9)",
-            borderRadius: "12px",
-            border: "2px solid #4caf50",
-          }}>
-            <span style={{ fontWeight: "bold", color: "#4caf50", fontSize: "0.9rem" }}>
-              Level 1: Money Basics
-            </span>
-          </div>
         </div>
       </div>
 
