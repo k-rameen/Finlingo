@@ -62,8 +62,13 @@ The frontend handles navigation, animations, and interactive quizzes, while the 
 * Interactive homepage with unlockable levels
 * Short lessons and quizzes per topic
 * Progress tracking with locked and unlocked levels
-* Parent and child mode support
+* Badge system - earn achievements by completing levels and reaching goals
+* Goal Jar - set savings goals and track progress visually
+* Add money to goals with preset or custom amounts
+* Settings page with appearance themes and advanced options
 * Simple, kid-friendly UI design
+
+---
 
 ## Project Structure
 
@@ -99,3 +104,14 @@ The frontend handles navigation, animations, and interactive quizzes, while the 
 ├── LICENSE
 └── README.md
 ```
+## Built For
+
+* **ElleHacks** - Challenge 3: Empowerment 💼⚖️
+
+* **Financial empowerment** - Breaking down barriers to money knowledge
+
+* **Early education access** - Teaching kids before trial-and-error becomes costly
+
+* **Inclusive learning** - Making complex concepts simple and approachable for all
+
+💰 **Finlingo** — empowering the next generation with financial confidence, one lesson at a time.
