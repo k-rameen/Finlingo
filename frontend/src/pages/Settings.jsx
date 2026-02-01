@@ -65,7 +65,7 @@ export default function Settings() {
               ⚙️ Settings
             </div>
             <div style={{ ...base.subtitle, ...themeStyles.subtitle }}>
-              {username === "guest" ? "Guest mode" : `Settings for ${username}`}
+              {username === "guest" ? "👤 Guest mode" : `👤 Settings for ${username}`}
             </div>
           </div>
 
@@ -75,13 +75,13 @@ export default function Settings() {
               onClick={resetToDefaults}
               title="Reset all settings to default"
             >
-              Reset
+              🔄 Reset
             </button>
             <button 
               style={{ ...base.btn, ...themeStyles.btn }}
               onClick={() => nav("/home")}
             >
-              ← Back to Home
+              🏠 Back to Home
             </button>
           </div>
         </div>
@@ -120,8 +120,8 @@ export default function Settings() {
                     <div style={base.label}>Theme</div>
                     <div style={base.description}>
                       {prefs.theme === "enchanted" 
-                        ? "Fantasy theme for younger learners" 
-                        : "Modern theme for all ages"}
+                        ? "🌈 Fantasy theme for younger learners" 
+                        : "🌟 Modern theme for all ages"}
                     </div>
                   </div>
                   <div style={base.themeButtons}>
@@ -132,7 +132,7 @@ export default function Settings() {
                         ...(prefs.theme === "neo" ? themeStyles.themeButtonActive : themeStyles.themeButtonInactive)
                       }}
                     >
-                      Neo
+                      🌟 Neo
                     </button>
                     <button
                       onClick={() => update({ theme: "enchanted" })}
@@ -141,7 +141,7 @@ export default function Settings() {
                         ...(prefs.theme === "enchanted" ? themeStyles.themeButtonActive : themeStyles.themeButtonInactive)
                       }}
                     >
-                      Enchanted
+                      🧚 Enchanted
                     </button>
                   </div>
                 </div>
@@ -156,33 +156,33 @@ export default function Settings() {
                 </div>
                 
                 <div style={base.infoBox}>
-                  <div style={base.infoTitle}>Local Storage</div>
+                  <div style={base.infoTitle}>💾 Local Storage</div>
                   <div style={base.infoText}>
                     Your settings are saved locally in your browser. To reset everything, you can:
                   </div>
                   <div style={base.steps}>
-                    <div style={base.step}>1. Open Developer Tools (F12)</div>
-                    <div style={base.step}>2. Go to "Application" tab</div>
-                    <div style={base.step}>3. Find "Local Storage"</div>
-                    <div style={base.step}>4. Delete keys starting with "finlingo_"</div>
+                    <div style={base.step}>1️⃣ Open Developer Tools (F12)</div>
+                    <div style={base.step}>2️⃣ Go to "Application" tab</div>
+                    <div style={base.step}>3️⃣ Find "Local Storage"</div>
+                    <div style={base.step}>4️⃣ Delete keys starting with "finlingo_"</div>
                   </div>
                 </div>
 
                 <div style={base.row}>
                   <div>
-                    <div style={base.label}>Clear All Progress</div>
+                    <div style={base.label}>🗑️ Clear All Progress</div>
                     <div style={base.description}>Reset all your progress and start fresh</div>
                   </div>
                   <button
                     style={{ ...base.dangerBtn, ...themeStyles.dangerBtn }}
                     onClick={() => {
-                      if (window.confirm("Are you sure? This will reset ALL your progress and settings!")) {
+                      if (window.confirm("⚠️ Are you sure? This will reset ALL your progress and settings!")) {
                         localStorage.clear();
                         window.location.reload();
                       }
                     }}
                   >
-                    Clear All Data
+                    🗑️ Clear All Data
                   </button>
                 </div>
               </div>
@@ -200,14 +200,18 @@ const base = {
     display: "grid",
     placeItems: "center",
     padding: 24,
-    fontFamily:
-      'ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+    background: "linear-gradient(135deg, #FFD1DC 0%, #A8D8EA 50%, #C9E4CA 100%)",
+    color: "#2C3E50",
+    fontFamily: '"Comic Sans MS", "Chalkboard SE", "Arial Rounded MT Bold", "Segoe UI", sans-serif',
   },
   card: {
     width: "min(600px, 95vw)",
     borderRadius: 24,
     padding: 24,
+    background: "rgba(255, 255, 255, 0.95)",
+    border: "3px solid #A8D8EA",
     boxSizing: "border-box",
+    boxShadow: "0 20px 60px rgba(168, 216, 234, 0.3)",
   },
   header: {
     display: "flex",
@@ -230,7 +234,6 @@ const base = {
   },
   subtitle: { 
     fontSize: 14, 
-    opacity: 0.8,
     display: "flex",
     alignItems: "center",
     gap: 8,
@@ -291,8 +294,8 @@ const base = {
     marginTop: 0,
     padding: 24,
     borderRadius: 20,
-    border: "1px solid rgba(255,255,255,0.12)",
-    background: "rgba(255,255,255,0.04)",
+    background: "rgba(255, 255, 255, 0.8)",
+    border: "2px solid #C9E4CA",
     marginBottom: 20,
   },
   sectionTitle: { 
@@ -309,27 +312,30 @@ const base = {
     justifyContent: "space-between",
     gap: 20,
     padding: "18px 0",
-    borderBottom: "1px solid rgba(255,255,255,0.08)",
+    borderBottom: "2px solid rgba(168, 216, 234, 0.3)",
     flexWrap: "wrap",
   },
   label: { 
     fontSize: 16, 
-    fontWeight: 700, 
-    opacity: 0.95,
+    fontWeight: 700,
     marginBottom: 4,
+    display: "flex",
+    alignItems: "center",
+    gap: 8,
   },
   description: { 
     fontSize: 13, 
-    opacity: 0.7, 
+    color: "#5D6D7E",
     lineHeight: 1.5,
     maxWidth: 400,
   },
   themeButtons: {
     display: "flex",
     gap: 10,
-    backgroundColor: "rgba(255,255,255,0.1)",
+    backgroundColor: "rgba(255, 255, 255, 0.5)",
     borderRadius: 12,
     padding: 4,
+    border: "2px solid #A8D8EA",
   },
   themeButton: {
     padding: "10px 20px",
@@ -343,19 +349,22 @@ const base = {
   infoBox: {
     padding: 20,
     borderRadius: 16,
-    background: "rgba(255,255,255,0.05)",
-    border: "1px dashed rgba(255,255,255,0.2)",
+    background: "rgba(255, 255, 255, 0.9)",
+    border: "2px dashed #A8D8EA",
     marginBottom: 24,
   },
   infoTitle: {
     fontSize: 16,
     fontWeight: 700,
     marginBottom: 12,
-    color: "rgba(255,255,255,0.9)",
+    color: "#2C3E50",
+    display: "flex",
+    alignItems: "center",
+    gap: 8,
   },
   infoText: {
     fontSize: 14,
-    opacity: 0.8,
+    color: "#5D6D7E",
     lineHeight: 1.6,
     marginBottom: 16,
   },
@@ -366,7 +375,7 @@ const base = {
   },
   step: {
     fontSize: 13,
-    opacity: 0.7,
+    color: "#5D6D7E",
     display: "flex",
     alignItems: "center",
     gap: 8,
@@ -379,121 +388,118 @@ const base = {
     cursor: "pointer",
     fontSize: 14,
     transition: "all 0.2s ease",
+    display: "flex",
+    alignItems: "center",
+    gap: 8,
   },
 };
 
 const neo = {
   page: {
-    background:
-      "radial-gradient(1200px 600px at 20% 0%, rgba(99,102,241,0.18), transparent 60%), radial-gradient(900px 500px at 90% 20%, rgba(34,197,94,0.14), transparent 55%), #0b1020",
-    color: "#e8eefc",
+    // Uses base.page background
   },
   card: {
-    background: "rgba(255,255,255,0.05)",
-    border: "1px solid rgba(255,255,255,0.10)",
-    backdropFilter: "blur(10px)",
-    boxShadow: "0 20px 60px rgba(0,0,0,0.35)",
+    // Uses base.card styles
   },
   title: {
-    background: "linear-gradient(135deg, #60a5fa, #8b5cf6)",
+    background: "linear-gradient(135deg, #FFD1DC, #A8D8EA)",
     WebkitBackgroundClip: "text",
     WebkitTextFillColor: "transparent",
   },
   subtitle: {
-    color: "#a5b4fc",
+    color: "#5D6D7E",
   },
   btn: {
-    background: "linear-gradient(135deg, #4f46e5, #7c3aed)",
-    color: "white",
-    boxShadow: "0 4px 14px rgba(99, 102, 241, 0.4)",
+    background: "linear-gradient(135deg, #FFD1DC, #A8D8EA)",
+    color: "#2C3E50",
+    boxShadow: "0 4px 14px rgba(255, 209, 220, 0.4)",
   },
   btnSecondary: {
-    background: "rgba(255,255,255,0.1)",
-    color: "#e8eefc",
-    border: "1px solid rgba(255,255,255,0.2)",
+    background: "rgba(255, 255, 255, 0.9)",
+    color: "#5D6D7E",
+    border: "2px solid #C9E4CA",
   },
   sidebarBtn: {
-    background: "rgba(255,255,255,0.07)",
-    color: "#c7d2fe",
+    background: "rgba(255, 255, 255, 0.8)",
+    color: "#5D6D7E",
+    border: "2px solid #A8D8EA",
   },
   sidebarBtnActive: {
-    background: "linear-gradient(135deg, rgba(99,102,241,0.3), rgba(124,58,237,0.3))",
-    color: "white",
-    boxShadow: "0 4px 12px rgba(99, 102, 241, 0.2)",
+    background: "linear-gradient(135deg, #FFD1DC, #A8D8EA)",
+    color: "#2C3E50",
+    boxShadow: "0 4px 12px rgba(255, 209, 220, 0.2)",
   },
   sectionTitle: {
-    color: "#93c5fd",
+    color: "#FFD1DC",
   },
   themeButtonActive: {
-    background: "linear-gradient(135deg, #4f46e5, #7c3aed)",
-    color: "white",
-    boxShadow: "0 4px 12px rgba(99, 102, 241, 0.2)",
+    background: "linear-gradient(135deg, #FFD1DC, #A8D8EA)",
+    color: "#2C3E50",
+    boxShadow: "0 4px 12px rgba(255, 209, 220, 0.2)",
   },
   themeButtonInactive: {
     background: "transparent",
-    color: "rgba(255,255,255,0.7)",
+    color: "#7F8C8D",
+    border: "2px solid #C9E4CA",
   },
   dangerBtn: {
-    background: "rgba(239, 68, 68, 0.2)",
-    color: "#fecaca",
-    border: "1px solid rgba(239, 68, 68, 0.3)",
+    background: "rgba(255, 107, 107, 0.2)",
+    color: "#CC3366",
+    border: "2px solid #FF6B6B",
   },
 };
 
 const enchanted = {
   page: {
-    background:
-      "radial-gradient(1200px 700px at 15% 0%, rgba(168,124,255,0.26), transparent 55%), radial-gradient(1000px 700px at 95% 20%, rgba(64,224,208,0.18), transparent 55%), radial-gradient(900px 600px at 50% 100%, rgba(255,190,110,0.16), transparent 60%), #07081a",
-    color: "#f4f1ff",
+    // Uses base.page background
   },
   card: {
-    background: "rgba(255,255,255,0.06)",
-    border: "1px solid rgba(255,255,255,0.12)",
-    backdropFilter: "blur(12px)",
-    boxShadow: "0 24px 70px rgba(0,0,0,0.50)",
+    // Uses base.card styles
   },
   title: {
-    background: "linear-gradient(135deg, #a87cff, #ffbe6e)",
+    background: "linear-gradient(135deg, #FF9FF3, #FFD1DC, #A8D8EA)",
     WebkitBackgroundClip: "text",
     WebkitTextFillColor: "transparent",
   },
   subtitle: {
-    color: "#d4c2ff",
+    color: "#FF9FF3",
   },
   btn: {
-    background: "linear-gradient(135deg, #a87cff, #40e0d0)",
-    color: "white",
-    boxShadow: "0 4px 20px rgba(168, 124, 255, 0.4)",
+    background: "linear-gradient(135deg, #FF9FF3, #A8D8EA, #C9E4CA)",
+    color: "#2C3E50",
+    boxShadow: "0 4px 20px rgba(255, 159, 243, 0.4)",
   },
   btnSecondary: {
-    background: "rgba(255,255,255,0.1)",
-    color: "#f4f1ff",
-    border: "1px solid rgba(255,255,255,0.25)",
+    background: "rgba(255, 255, 255, 0.9)",
+    color: "#FF9FF3",
+    border: "2px solid #FF9FF3",
   },
   sidebarBtn: {
-    background: "rgba(255,255,255,0.08)",
-    color: "#d4c2ff",
+    background: "rgba(255, 255, 255, 0.8)",
+    color: "#FF9FF3",
+    border: "2px solid #FF9FF3",
   },
   sidebarBtnActive: {
-    background: "linear-gradient(135deg, rgba(168,124,255,0.3), rgba(64,224,208,0.3))",
-    color: "white",
-    boxShadow: "0 4px 20px rgba(168, 124, 255, 0.3)",
+    background: "linear-gradient(135deg, #FF9FF3, #A8D8EA)",
+    color: "#2C3E50",
+    boxShadow: "0 4px 20px rgba(255, 159, 243, 0.3)",
   },
   sectionTitle: {
-    color: "#ffbe6e",
+    color: "#FF9FF3",
   },
   themeButtonActive: {
-    background: "linear-gradient(135deg, #a87cff, #40e0d0)",
-    color: "white",
-    boxShadow: "0 4px 12px rgba(168, 124, 255, 0.2)",
+    background: "linear-gradient(135deg, #FF9FF3, #A8D8EA)",
+    color: "#2C3E50",
+    boxShadow: "0 4px 12px rgba(255, 159, 243, 0.2)",
   },
   themeButtonInactive: {
     background: "transparent",
-    color: "rgba(255,255,255,0.7)",
+    color: "#7F8C8D",
+    border: "2px solid #FFD1DC",
   },
   dangerBtn: {
-    background: "rgba(255, 107, 107, 0.2)",
-    color: "#ffdada",
-    border: "1px solid rgba(255, 107, 107, 0.3)",
+    background: "rgba(255, 107, 107, 0.3)",
+    color: "#CC3366",
+    border: "2px solid #FF6B6B",
   },
 };
