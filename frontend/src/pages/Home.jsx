@@ -7,6 +7,19 @@ import { useNavigate, useLocation } from "react-router-dom";
 // - finishing a level sets localStorage.finlingo_last_completed_level = "<n>"
 // - when you come back to /home, it unlocks the next level
 
+function readUserPrefs() {
+  const username = localStorage.getItem("finlingo_username") || "guest";
+  const prefsKey = `finlingo_prefs:${username}`;
+  
+  try {
+    const raw = localStorage.getItem(prefsKey);
+    if (!raw) return { theme: "neo" };
+    return JSON.parse(raw);
+  } catch {
+    return { theme: "neo" };
+  }
+}
+
 export default function Home() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -14,6 +27,9 @@ export default function Home() {
   const [selected, setSelected] = useState(1);
   const [unlockedLevel, setUnlockedLevel] = useState(1);
   const [toast, setToast] = useState("Tap level 1 to start — complete them in order.");
+
+  const userPrefs = readUserPrefs();
+  const isEnchantedTheme = userPrefs.theme === "enchanted";
 
   // create 15 slots, but only first 5 are playable
   const levels = useMemo(() => {
@@ -100,7 +116,14 @@ export default function Home() {
   }
 
   return (
-    <div style={styles.page}>
+    <div style={{
+        ...styles.page,
+        // Apply theme based on settings
+        background: isEnchantedTheme 
+            ? "radial-gradient(1200px 700px at 15% 0%, rgba(168,124,255,0.26), transparent 55%), radial-gradient(1000px 700px at 95% 20%, rgba(64,224,208,0.18), transparent 55%), radial-gradient(900px 600px at 50% 100%, rgba(255,190,110,0.16), transparent 60%), #07081a"
+            : styles.page.background,
+        color: isEnchantedTheme ? "#f4f1ff" : styles.page.color,
+    }}>
       <div style={styles.topBar}>
         <div style={styles.centerTitle}>HOMEPAGE</div>
 
