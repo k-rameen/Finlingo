@@ -1,9 +1,8 @@
 import React, { useMemo, useState } from "react";
-import { login, signupChild, signupParent } from "../api/auth";
+import { login, signupChild } from "../api/auth";
 import { useNavigate } from "react-router-dom";
 
 /*
-  - parent/child toggle
   - login/signup tabs
   - conditional fields
   - now connected to backend (flask)
@@ -12,19 +11,15 @@ import { useNavigate } from "react-router-dom";
 export default function AuthPage() {
   const navigate = useNavigate();
 
-  const [mode, setMode] = useState("child"); // "child" | "parent"
   const [view, setView] = useState("login"); // "login" | "signup"
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
   const [form, setForm] = useState({
-    // shared
     name: "",
     username: "",
     password: "",
-    // parent-only
-    childId: "",
   });
 
   const fields = useMemo(() => {
@@ -33,14 +28,9 @@ export default function AuthPage() {
       return ["username", "password"];
     }
 
-    // signup: depends on mode
-    if (mode === "child") {
-      return ["name", "username", "password"];
-    }
-
-    // parent signup
-    return ["name", "username", "password", "childId"];
-  }, [mode, view]);
+    // signup: child only
+    return ["name", "username", "password"];
+  }, [view]);
 
   const canSubmit = useMemo(() => {
     for (const key of fields) {
@@ -79,63 +69,35 @@ export default function AuthPage() {
         // route by role
         navigate("/home");
 
-
         return;
       }
 
-      // signup
-      if (mode === "child") {
-        const res = await signupChild({
-          name: form.name.trim(),
-          username: form.username.trim(),
-          password: form.password,
-        });
-
-        if (!res?.ok) {
-          setError(res?.error || "Child signup failed");
-          return;
-        }
-
-        // show child id so parent can use it
-        const childId = res?.user?.childId;
-        alert(
-          `Child account created \n\nChild ID: ${childId}\n\nSave this ID and use it when creating the parent account.`
-        );
-
-        // switch to login, keep username/password for convenience
-        setView("login");
-        setForm((prev) => ({
-          name: "",
-          username: prev.username,
-          password: prev.password,
-          childId: "",
-        }));
-
-        return;
-      }
-
-      // parent signup
-      const res = await signupParent({
+      // signup - child only
+      const res = await signupChild({
         name: form.name.trim(),
         username: form.username.trim(),
         password: form.password,
-        childId: form.childId.trim(),
       });
 
       if (!res?.ok) {
-        setError(res?.error || "Parent signup failed");
+        setError(res?.error || "Signup failed");
         return;
       }
 
-      alert("Parent account created! Now log in.");
+      // show child id so parent can use it
+      const childId = res?.user?.childId;
+      alert(
+        `Child account created \n\nChild ID: ${childId}\n\nSave this ID.`
+      );
 
+      // switch to login, keep username/password for convenience
       setView("login");
       setForm((prev) => ({
         name: "",
         username: prev.username,
         password: prev.password,
-        childId: "",
       }));
+
     } catch (err) {
       setError("Network error. Is the backend running on http://127.0.0.1:5050?");
     } finally {
@@ -152,7 +114,6 @@ export default function AuthPage() {
       name: nextView === "login" ? "" : prev.name,
       username: prev.username,
       password: prev.password,
-      childId: nextView === "login" ? "" : prev.childId,
     }));
   }
 
@@ -163,30 +124,26 @@ export default function AuthPage() {
           <div style={styles.brand}>
             <div style={styles.logo} />
             <div>
-              <div style={styles.title}>Finlingo</div>
+              <div style={styles.title}>Finlingo 🧸</div>
             </div>
           </div>
-
-          <ModeToggle mode={mode} onChange={setMode} />
         </div>
 
         <div style={styles.tabs}>
           <TabButton active={view === "login"} onClick={() => switchView("login")}>
-            Log in
+            Log in 🔐
           </TabButton>
           <TabButton active={view === "signup"} onClick={() => switchView("signup")}>
-            Create account
+            Create account ✨
           </TabButton>
         </div>
 
         <div style={styles.modeLine}>
-          <span style={styles.modePill}>{mode === "child" ? "Child mode" : "Parent mode"}</span>
+          <span style={styles.modePill}>Child account</span>
           <span style={styles.modeHint}>
             {view === "login"
               ? "Log in with your username + password."
-              : mode === "child"
-              ? "Create a child account."
-              : "Create a parent account and link to your child."}
+              : "Create a child account."}
           </span>
         </div>
 
@@ -196,7 +153,7 @@ export default function AuthPage() {
           {fields.includes("name") && (
             <Field
               label="Name"
-              placeholder={mode === "child" ? "e.g., Ava" : "e.g., Sarah Ahmed"}
+              placeholder="e.g., Ava"
               value={form.name}
               onChange={(v) => updateField("name", v)}
             />
@@ -204,7 +161,7 @@ export default function AuthPage() {
 
           {fields.includes("username") && (
             <Field
-              label="Username"
+              label="👤 Username"
               placeholder="e.g., ava123"
               value={form.username}
               onChange={(v) => updateField("username", v)}
@@ -214,22 +171,12 @@ export default function AuthPage() {
 
           {fields.includes("password") && (
             <Field
-              label="Password"
+              label="🗝️ Password"
               placeholder="min 6 characters"
               value={form.password}
               onChange={(v) => updateField("password", v)}
               type="password"
               autoComplete={view === "login" ? "current-password" : "new-password"}
-            />
-          )}
-
-          {fields.includes("childId") && (
-            <Field
-              label="Child ID"
-              placeholder="e.g., CH-48219"
-              value={form.childId}
-              onChange={(v) => updateField("childId", v)}
-              helper="Paste the Child ID created when the child account was made."
             />
           )}
 
@@ -242,7 +189,7 @@ export default function AuthPage() {
             }}
             disabled={!canSubmit || loading}
           >
-            {loading ? "Please wait..." : view === "login" ? "Log in" : "Create account"}
+            {loading ? "Please wait..." : view === "login" ? "Let's Go! 🎮" : "Create account"}
           </button>
 
           <div style={styles.footerRow}>
@@ -250,7 +197,7 @@ export default function AuthPage() {
               type="button"
               onClick={() => {
                 setError("");
-                setForm({ name: "", username: "", password: "", childId: "" });
+                setForm({ name: "", username: "", password: "" });
               }}
               style={styles.ghostBtn}
               disabled={loading}
@@ -260,29 +207,6 @@ export default function AuthPage() {
           </div>
         </form>
       </div>
-    </div>
-  );
-}
-
-function ModeToggle({ mode, onChange }) {
-  const isChild = mode === "child";
-  return (
-    <div style={styles.toggleWrap}>
-      <span style={{ ...styles.toggleLabel, opacity: isChild ? 1 : 0.55 }}>Parent</span>
-
-      <button
-        type="button"
-        onClick={() => onChange(isChild ? "parent" : "child")}
-        style={{
-          ...styles.toggleBtn,
-          justifyContent: isChild ? "flex-end" : "flex-start",
-        }}
-        aria-label="toggle parent/child mode"
-      >
-        <span style={styles.toggleKnob} />
-      </button>
-
-      <span style={{ ...styles.toggleLabel, opacity: isChild ? 0.55 : 1 }}>Child</span>
     </div>
   );
 }
@@ -326,8 +250,7 @@ const styles = {
     placeItems: "center",
     padding: 24,
     background:
-      "radial-gradient(1200px 600px at 20% 0%, rgba(99,102,241,0.18), transparent 60%), radial-gradient(900px 500px at 90% 20%, rgba(34,197,94,0.14), transparent 55%), #0b1020",
-    color: "#e8eefc",
+      "linear-gradient(135deg, #FFD1DC 0%, #A8D8EA 50%, #C9E4CA 100%)",
     fontFamily:
       'ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji"',
   },
@@ -343,7 +266,7 @@ const styles = {
   header: {
     display: "flex",
     alignItems: "center",
-    justifyContent: "space-between",
+    justifyContent: "center",
     gap: 14,
     marginBottom: 14,
   },
@@ -352,29 +275,9 @@ const styles = {
     width: 40,
     height: 40,
     borderRadius: 12,
-    background: "linear-gradient(135deg, rgba(99,102,241,1), rgba(34,197,94,1))",
+    background: "linear-gradient(135deg, #eaaebc 0%, #86bdd1 50%, #a2dda4)",
   },
   title: { fontSize: 18, fontWeight: 800, letterSpacing: 0.2 },
-
-  toggleWrap: { display: "flex", alignItems: "center", gap: 10 },
-  toggleLabel: { fontSize: 12, fontWeight: 700, letterSpacing: 0.2 },
-  toggleBtn: {
-    width: 54,
-    height: 30,
-    borderRadius: 999,
-    padding: 4,
-    background: "rgba(255,255,255,0.10)",
-    border: "1px solid rgba(255,255,255,0.14)",
-    display: "flex",
-    alignItems: "center",
-    cursor: "pointer",
-  },
-  toggleKnob: {
-    width: 22,
-    height: 22,
-    borderRadius: 999,
-    background: "rgba(255,255,255,0.90)",
-  },
 
   tabs: {
     display: "grid",
@@ -392,8 +295,8 @@ const styles = {
     cursor: "pointer",
   },
   tabActive: {
-    background: "rgba(99,102,241,0.22)",
-    border: "1px solid rgba(99,102,241,0.45)",
+    background: "rgba(255, 184, 202, 0.22)",
+    border: "1px solid rgba(255, 118, 164, 0.45)",
   },
 
   modeLine: {
@@ -419,7 +322,7 @@ const styles = {
     borderRadius: 14,
     background: "rgba(239,68,68,0.12)",
     border: "1px solid rgba(239,68,68,0.35)",
-    color: "#ffd3d3",
+    color: "#9c5353",
     fontSize: 12,
     fontWeight: 700,
   },
@@ -428,12 +331,12 @@ const styles = {
   field: { marginBottom: 12 },
   label: { display: "block", fontSize: 12, fontWeight: 700, marginBottom: 6 },
   input: {
-    width: "100%",
+    width: "95%",
     padding: "11px 12px",
     borderRadius: 14,
-    border: "1px solid rgba(255,255,255,0.14)",
+    border: "2px solid rgba(255,255,255,0.14)",
     background: "rgba(255,255,255,0.06)",
-    color: "#e8eefc",
+    color: "#000000",
     outline: "none",
   },
   helper: { fontSize: 11, opacity: 0.72, marginTop: 6 },
@@ -442,10 +345,10 @@ const styles = {
     width: "100%",
     padding: "12px 14px",
     borderRadius: 14,
-    border: "none",
-    color: "#081027",
+    border: "1px solid rgba(0, 0, 0, 0.18)",
+    color: "#ffffff",
     fontWeight: 900,
-    background: "linear-gradient(135deg, rgba(99,102,241,1), rgba(34,197,94,1))",
+    background: "#78bfd8",
     marginTop: 8,
   },
   footerRow: {
